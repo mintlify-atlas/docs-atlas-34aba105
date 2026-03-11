@@ -1,0 +1,81 @@
+{
+  "projectType": "general",
+  "projectName": "SecureCommands",
+  "projectDescription": "A Minecraft/Spigot plugin that protects critical server commands with password authentication and whitelist management.",
+  "theme": "aspen",
+  "primaryColor": "#00BCD4",
+  "lightColor": "#4DD0E1",
+  "darkColor": "#0097A7",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "introduction",
+          "installation",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Configuration",
+        "pages": [
+          "configuration/database",
+          "configuration/commands",
+          "configuration/whitelist",
+          "configuration/discord",
+          "configuration/languages"
+        ]
+      },
+      {
+        "group": "Commands",
+        "pages": [
+          "commands/overview",
+          "commands/authentication",
+          "commands/administration",
+          "commands/whitelist-management",
+          "commands/command-blocking"
+        ]
+      },
+      {
+        "group": "Features",
+        "pages": [
+          "features/command-protection",
+          "features/premium-players",
+          "features/discord-notifications",
+          "features/multi-language"
+        ]
+      },
+      {
+        "group": "Advanced",
+        "pages": [
+          "advanced/permissions",
+          "advanced/security",
+          "advanced/troubleshooting",
+          "advanced/api"
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Password-protected command execution with BCrypt encryption",
+    "Whitelist-based access control for authorized players",
+    "Automatic authentication for premium Minecraft accounts",
+    "Discord webhook integration for security alerts",
+    "Multi-language support (8 languages)",
+    "MySQL database persistence",
+    "Dynamic command blocking configuration",
+    "OP status management and protection"
+  ],
+  "publicApiSurface": [
+    "/sclogin <password> - Authenticate to use protected commands",
+    "/sc setcode <password> - Set your secure authentication code",
+    "/sc resetcode <player> - Reset a player's security code",
+    "/sc resetall - Reset all security codes in the database",
+    "/sc reload - Reload plugin configuration",
+    "/sc add <player> - Add a player to the whitelist",
+    "/sc remove <player> - Remove a player from the whitelist",
+    "/sc addcommand <command> - Add a command to the blocked list",
+    "/sc removecommand <command> - Remove a command from the blocked list",
+    "/sc premium <player> - Toggle premium authentication check for a player"
+  ]
+}
