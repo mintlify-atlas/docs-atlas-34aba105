@@ -1,0 +1,381 @@
+---
+title: 'Security Features'
+description: 'In-depth guide to SecureCommands security architecture and best practices'
+icon: 'lock'
+---
+
+## Overview
+
+SecureCommands implements multiple layers of security to protect your server from unauthorized access and malicious activity. This guide covers the security features, encryption methods, and best practices.
+
+## BCrypt Password Encryption
+
+### How It Works
+
+SecureCommands uses **BCrypt** with a cost factor of 12 for all password hashing. BCrypt is an industry-standard adaptive hashing function designed specifically for secure password storage.
+
+```java
+// Password hashing (from DatabaseManager.java:70)
+String hashedCode = BCrypt.hashpw(code, BCrypt.gensalt(12));
+
+// Password verification (from DatabaseManager.java:91)
+return BCrypt.checkpw(enteredCode, storedHash);
+```
+
+### Security Properties
+
+<CardGroup cols={2}>
+  <Card title="Salt Generation" icon="shuffle">
+    Each password is hashed with a unique, randomly generated salt, preventing rainbow table attacks.
+  </Card>
+  <Card title="Adaptive Cost" icon="gauge-high">
+    The cost factor of 12 means each hash takes ~250ms to compute, making brute-force attacks impractical.
+  </Card>
+  <Card title="One-Way Hashing" icon="arrow-right">
+    Passwords cannot be decrypted from their hashes. Only verification is possible.
+  </Card>
+  <Card title="Future-Proof" icon="shield">
+    The cost factor can be increased over time as hardware becomes more powerful.
+  </Card>
+</CardGroup>
+
+### What This Means for Your Server
+
+<Check>
+**Passwords are never stored in plaintext** - Even if your database is compromised, attackers cannot retrieve the original passwords.
+</Check>
+
+<Check>
+**Brute-force protection** - The computational cost makes password cracking extremely slow and expensive.
+</Check>
+
+<Check>
+**Industry-standard security** - BCrypt is used by major platforms like bcrypt-based systems in Linux and many web applications.
+</Check>
+
+## OP Status Management
+
+### Automatic OP Removal
+
+SecureCommands actively protects your server by automatically removing OP status from unauthorized players:
+
+```java
+// Checked on plugin startup (SecureCommands.java:177-192)
+private void checkOperatorsOnStartup() {
+    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+        if (onlinePlayer.isOp()) {
+            if (!configManager.getWhitelist().contains(onlinePlayer.getName())) {
+                onlinePlayer.setOp(false);
+                // Player is notified and logged
+            }
+        }
+    }
+}
+```
+
+### When OP Status is Checked
+
+1. **Server startup** - All online players are checked
+2. **Player join** - OP status validated immediately
+3. **Runtime protection** - Continuous monitoring
+
+<Warning>
+Only players on the whitelist can maintain OP status. This prevents:
+- Unauthorized OP grants
+- Plugin-based privilege escalation
+- Compromised accounts from retaining admin access
+</Warning>
+
+## Premium Account Verification
+
+### How It Works
+
+SecureCommands integrates with Mojang's API to verify whether player accounts are premium (paid) or cracked (offline):
+
+```java
+// Premium verification on join (SecureCommands.java:208-226)
+premiumChecker.checkPlayerPremium(player.getName(), isPremium -> {
+    if (isPremium) {
+        // Auto-authenticate premium accounts
+        commandBlocker.authenticatePlayer(player.getUniqueId());
+    } else {
+        // Check if attempting to access premium account
+        if (databaseManager.isPremiumAccount(player.getName())) {
+            player.kickPlayer("This is a premium account. Use a premium client.");
+        }
+    }
+});
+```
+
+### Premium Account Protection
+
+<Steps>
+  <Step title="Account Registration">
+    When a secure code is set, the plugin records whether the account is premium or cracked.
+  </Step>
+  
+  <Step title="Login Validation">
+    On each login, the plugin checks the current authentication method against the registered type.
+  </Step>
+  
+  <Step title="Automatic Kick">
+    If a cracked client attempts to access a premium account, they are immediately kicked.
+  </Step>
+</Steps>
+
+### Managing Premium Status
+
+Administrators can manually override premium status:
+
+```bash
+# Mark account as premium
+/sc premium Steve true
+
+# Mark account as cracked
+/sc premium Steve false
+```
+
+## Command Blocking System
+
+SecureCommands can block specific commands until players authenticate:
+
+### Configuration
+
+In `config.yml`, specify commands to block:
+
+```yaml
+blocked-commands:
+  - "op"
+  - "deop"
+  - "stop"
+  - "reload"
+  - "permissions"
+  - "lp"
+  - "pex"
+```
+
+### Dynamic Management
+
+Add or remove blocked commands at runtime:
+
+```bash
+# Add a command to the blocklist
+/sc addcommand <command>
+
+# Remove a command from the blocklist
+/sc removecommand <command>
+```
+
+### How Blocking Works
+
+The `CommandBlocker` listener intercepts commands before execution:
+
+1. Player attempts to execute a blocked command
+2. Plugin checks if player is authenticated
+3. If not authenticated and on whitelist, command is cancelled
+4. Player receives an error message
+
+## Discord Security Alerts
+
+SecureCommands can send real-time security alerts to Discord via webhooks:
+
+### Configuration
+
+In `config.yml`:
+
+```yaml
+discord:
+  enabled: true
+  security-webhook-url: "https://discord.com/api/webhooks/..."
+  update-webhook-url: "https://discord.com/api/webhooks/..."
+```
+
+### Alert Types
+
+<AccordionGroup>
+  <Accordion title="OP Status Removal">
+    Triggered when a non-whitelisted player loses OP status automatically.
+  </Accordion>
+  
+  <Accordion title="Premium Account Kick">
+    Triggered when a cracked client is kicked for attempting to access a premium account.
+  </Accordion>
+  
+  <Accordion title="Plugin Updates">
+    Notifies when a new version of SecureCommands is available.
+  </Accordion>
+</AccordionGroup>
+
+## Database Security
+
+### Connection Security
+
+SecureCommands uses MySQL with connection pooling and automatic reconnection:
+
+```java
+// Database connection (DatabaseManager.java:29-31)
+connection = DriverManager.getConnection(
+    "jdbc:mysql://" + host + ":" + port + "/" + database + "?useSSL=false&autoReconnect=true",
+    user, password);
+```
+
+### Best Practices for Database Security
+
+<AccordionGroup>
+  <Accordion title="Use Strong Database Passwords">
+    Generate a strong, random password for your MySQL user. Never use default passwords like "password" or "admin".
+  </Accordion>
+  
+  <Accordion title="Restrict Database Access">
+    Create a dedicated MySQL user for SecureCommands with minimal privileges:
+    
+    ```sql
+    CREATE USER 'securecommands'@'localhost' IDENTIFIED BY 'strong_password';
+    GRANT SELECT, INSERT, UPDATE, DELETE ON securecommands_db.* TO 'securecommands'@'localhost';
+    FLUSH PRIVILEGES;
+    ```
+  </Accordion>
+  
+  <Accordion title="Enable MySQL SSL">
+    For production servers, enable SSL connections to encrypt data in transit. Modify the connection string:
+    
+    ```yaml
+    database:
+      host: "localhost"
+      port: 3306
+      name: "securecommands_db"
+      user: "securecommands"
+      password: "strong_password"
+      useSSL: true
+    ```
+  </Accordion>
+  
+  <Accordion title="Regular Backups">
+    Back up your database regularly. If compromised, you can restore from a clean backup:
+    
+    ```bash
+    mysqldump -u root -p securecommands_db > backup.sql
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Security Best Practices
+
+### 1. Secure Code Requirements
+
+<Warning>
+Enforce strong secure codes for all whitelisted players:
+- Minimum 8 characters
+- Mix of letters, numbers, and symbols
+- No dictionary words or common patterns
+- Never share codes between players
+</Warning>
+
+### 2. Whitelist Management
+
+```yaml
+# config.yml
+whitelist:
+  - "TrustedAdmin1"
+  - "TrustedAdmin2"
+  # Only include players you absolutely trust
+```
+
+<Check>Review the whitelist monthly and remove inactive or untrusted players.</Check>
+
+### 3. Command Blocking
+
+Block all sensitive commands:
+
+```yaml
+blocked-commands:
+  - "op"
+  - "deop"
+  - "stop"
+  - "restart"
+  - "reload"
+  - "permissions"
+  - "lp"
+  - "pex"
+  - "pl"  # Prevents plugin enumeration
+  - "plugins"
+```
+
+### 4. Discord Integration
+
+Enable Discord alerts to monitor security events in real-time:
+
+```yaml
+discord:
+  enabled: true
+  security-webhook-url: "your-webhook-url"
+```
+
+### 5. Regular Updates
+
+Keep SecureCommands updated to receive security patches and improvements. The plugin automatically checks for updates and can notify you via Discord.
+
+### 6. Monitoring and Logging
+
+Regularly check your server logs for suspicious activity:
+
+```bash
+# Look for OP removal messages
+grep "Removing OP status" server.log
+
+# Check for authentication failures
+grep "Authentication failed" server.log
+
+# Monitor premium account kicks
+grep "premium account" server.log
+```
+
+## Threat Mitigation
+
+### Preventing Unauthorized Access
+
+<Steps>
+  <Step title="Whitelist Only Trusted Players">
+    The first line of defense. Only add players you personally know and trust.
+  </Step>
+  
+  <Step title="Enforce Strong Codes">
+    Require complex secure codes that resist brute-force attacks.
+  </Step>
+  
+  <Step title="Enable Auto-OP Removal">
+    SecureCommands automatically removes OP from non-whitelisted players.
+  </Step>
+  
+  <Step title="Block Sensitive Commands">
+    Prevent execution of dangerous commands without authentication.
+  </Step>
+  
+  <Step title="Monitor Security Alerts">
+    Use Discord webhooks to receive real-time security notifications.
+  </Step>
+</Steps>
+
+### Responding to Security Incidents
+
+If you suspect a security breach:
+
+1. **Immediately reset all codes:** `/sc resetall`
+2. **Review the whitelist:** Remove any suspicious entries
+3. **Check database logs:** Look for unauthorized access
+4. **Change database password:** Update credentials in `config.yml`
+5. **Audit player permissions:** Verify permission plugin configuration
+6. **Review server logs:** Search for suspicious activity
+
+## Compliance and Standards
+
+SecureCommands follows industry best practices:
+
+- **OWASP Password Storage Guidelines** - BCrypt with cost factor 12
+- **Principle of Least Privilege** - Whitelist-based access control
+- **Defense in Depth** - Multiple security layers
+- **Security by Design** - Security features are default-enabled
+
+<Info>
+For security vulnerabilities or concerns, please report them responsibly to the plugin developer through SpigotMC.
+</Info>

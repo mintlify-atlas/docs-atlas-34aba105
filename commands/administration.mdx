@@ -1,0 +1,117 @@
+---
+title: Administration Commands
+description: Administrative commands for managing plugin configuration and player passwords
+---
+
+These commands are used by server administrators to manage the SecureCommands plugin, reload configurations, and reset player passwords.
+
+## /sc reload
+
+Reload the plugin configuration files without restarting the server.
+
+**Syntax:**
+```bash
+/sc reload
+```
+
+**Permission:** Requires OP status or console access
+
+**Requirements:**
+- Sender must be an operator (OP) or console
+
+**Examples:**
+
+```bash
+# Reload plugin configuration
+/sc reload
+```
+
+<Note>
+This command reloads all configuration files including `config.yml`, `messages.yml`, and refreshes the whitelist and blocked commands list.
+</Note>
+
+---
+
+## /sc resetcode
+
+Reset a specific player's secure password, allowing them to set a new one using `/sc setcode`.
+
+**Syntax:**
+```bash
+/sc resetcode <player>
+```
+
+**Parameters:**
+- `<player>` - The name of the player whose password should be reset
+
+**Permission:** Console only
+
+**Requirements:**
+- Can only be executed from the server console
+- Cannot be run by in-game players (even OPs)
+
+**Examples:**
+
+```bash
+# Reset Steve's password from console
+/sc resetcode Steve
+```
+
+<Note>
+**Console Only:** This command is intentionally restricted to console execution for security purposes. No in-game player, regardless of permissions, can reset passwords.
+</Note>
+
+<Note>
+After resetting, the player will need to use `/sc setcode <password>` to set a new password before they can authenticate again.
+</Note>
+
+---
+
+## /sc resetall
+
+Reset all players' secure passwords in the database. This is a destructive operation that clears all password data.
+
+**Syntax:**
+```bash
+/sc resetall
+```
+
+**Permission:** Console only
+
+**Requirements:**
+- Can only be executed from the server console
+- Cannot be run by in-game players (even OPs)
+
+**Examples:**
+
+```bash
+# Reset all players' passwords from console
+/sc resetall
+```
+
+<Note>
+**Dangerous Command:** This command resets ALL player passwords in the database. Use with extreme caution. All players will need to set new passwords using `/sc setcode`.
+</Note>
+
+<Note>
+**Console Only:** Like `/sc resetcode`, this command can only be executed from the server console for maximum security.
+</Note>
+
+---
+
+## Administrative Best Practices
+
+### Password Management
+- Keep password resets restricted to console only
+- Document when and why passwords are reset
+- Notify players when their passwords are reset
+
+### Configuration Changes
+- Always use `/sc reload` after modifying configuration files
+- Test changes in a development environment first
+- Keep backups of your configuration files
+
+### Security
+- Regularly review the whitelist to ensure only authorized players have access
+- Monitor Discord alerts (if configured) for failed authentication attempts
+- Use `/sc resetall` only in emergency situations or fresh setups

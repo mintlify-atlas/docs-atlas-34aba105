@@ -1,0 +1,523 @@
+---
+title: 'Troubleshooting'
+description: 'Common issues and solutions for SecureCommands'
+icon: 'wrench'
+---
+
+## Overview
+
+This guide covers common issues you may encounter with SecureCommands and how to resolve them. If your issue isn't listed here, check the logs and join the support community.
+
+## Database Issues
+
+<AccordionGroup>
+  <Accordion title="Database connection failed on startup">
+    **Symptoms:**
+    - Plugin fails to enable
+    - Error message: "Could not connect to database"
+    - Server shuts down after plugin load
+
+    **Solutions:**
+
+    1. **Verify MySQL is running:**
+       ```bash
+       systemctl status mysql
+       # or
+       service mysql status
+       ```
+
+    2. **Check database credentials in config.yml:**
+       ```yaml
+       database:
+         host: "localhost"
+         port: 3306
+         name: "securecommands_db"
+         user: "your_username"
+         password: "your_password"
+       ```
+
+    3. **Test database connection manually:**
+       ```bash
+       mysql -h localhost -u your_username -p securecommands_db
+       ```
+
+    4. **Verify database exists:**
+       ```sql
+       CREATE DATABASE IF NOT EXISTS securecommands_db;
+       ```
+
+    5. **Check firewall rules:**
+       - If MySQL is on a remote server, ensure port 3306 is open
+       - Verify the database user has remote access permissions
+
+    **Log Reference:** Check `logs/latest.log` for:
+    ```
+    [SecureCommands] Could not connect to database: <error details>
+    ```
+  </Accordion>
+
+  <Accordion title="Connection lost during gameplay">
+    **Symptoms:**
+    - Players cannot authenticate
+    - Commands fail with database errors
+    - Plugin continues running but features don't work
+
+    **Solutions:**
+
+    1. **Check if MySQL service crashed:**
+       ```bash
+       systemctl restart mysql
+       ```
+
+    2. **Verify max_connections in MySQL:**
+       ```sql
+       SHOW VARIABLES LIKE 'max_connections';
+       SET GLOBAL max_connections = 500;
+       ```
+
+    3. **Check for connection timeout issues:**
+       - Edit `my.cnf` or `my.ini`:
+       ```ini
+       [mysqld]
+       wait_timeout = 28800
+       interactive_timeout = 28800
+       ```
+
+    4. **Reload the plugin:**
+       ```bash
+       /sc reload
+       ```
+
+    **Prevention:**
+    - SecureCommands uses `autoReconnect=true` by default
+    - Consider using a connection pooling solution like HikariCP (future update)
+  </Accordion>
+
+  <Accordion title="Table 'player_data' doesn't exist">
+    **Symptoms:**
+    - Error messages about missing tables
+    - Plugin enables but features don't work
+
+    **Solutions:**
+
+    1. **Let the plugin create tables automatically:**
+       - The plugin creates tables on first connection
+       - Check that the database user has CREATE privileges
+
+    2. **Create tables manually:**
+       ```sql
+       CREATE TABLE IF NOT EXISTS player_data (
+           player_name VARCHAR(16) PRIMARY KEY,
+           code VARCHAR(60) NOT NULL,
+           authenticated BOOLEAN DEFAULT FALSE,
+           is_premium BOOLEAN DEFAULT FALSE
+       );
+       ```
+
+    3. **Grant proper permissions:**
+       ```sql
+       GRANT ALL PRIVILEGES ON securecommands_db.* TO 'your_username'@'localhost';
+       FLUSH PRIVILEGES;
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Authentication Issues
+
+<AccordionGroup>
+  <Accordion title="Players can't authenticate with /sclogin">
+    **Symptoms:**
+    - `/sclogin <password>` says incorrect password
+    - Players are certain they're using the correct code
+
+    **Solutions:**
+
+    1. **Verify the player is on the whitelist:**
+       ```bash
+       # Check config.yml
+       whitelist:
+         - "PlayerName"
+       ```
+
+    2. **Reset the player's code:**
+       ```bash
+       /sc resetcode <player>
+       /sc setcode <player> <newcode>
+       ```
+
+    3. **Check for case sensitivity:**
+       - Passwords are case-sensitive
+       - Player names are case-insensitive
+
+    4. **Verify database entry:**
+       ```sql
+       SELECT player_name, code FROM player_data WHERE player_name = 'playername';
+       ```
+
+    5. **Check for special characters:**
+       - Some characters may not work properly in-game chat
+       - Avoid using `/`, `\`, quotes, or spaces in codes
+  </Accordion>
+
+  <Accordion title="Premium players can't auto-authenticate">
+    **Symptoms:**
+    - Premium players must use `/sclogin` manually
+    - Auto-authentication doesn't work
+
+    **Solutions:**
+
+    1. **Verify server is in online-mode:**
+       ```properties
+       # server.properties
+       online-mode=false  # Must be false for premium check to trigger
+       ```
+
+    2. **Check if premium check is disabled for the player:**
+       ```bash
+       # The player may have premium checking disabled
+       # This is stored per-player in player data
+       ```
+
+    3. **Verify premium status in database:**
+       ```sql
+       SELECT player_name, is_premium FROM player_data WHERE player_name = 'playername';
+       ```
+
+    4. **Manually set premium status:**
+       ```bash
+       /sc premium <player> true
+       ```
+
+    5. **Check Mojang API accessibility:**
+       - The plugin must be able to reach Mojang's servers
+       - Check firewall rules for outbound HTTPS connections
+  </Accordion>
+
+  <Accordion title="Commands still blocked after authentication">
+    **Symptoms:**
+    - Player successfully authenticates with `/sclogin`
+    - Blocked commands still don't work
+
+    **Solutions:**
+
+    1. **Verify authentication status:**
+       - Check server logs for authentication messages
+
+    2. **Check if command is in blocked-commands list:**
+       ```yaml
+       # config.yml
+       blocked-commands:
+         - "your_command"
+       ```
+
+    3. **Ensure proper permissions:**
+       - Player needs `securecommands.admin` for admin commands
+       - Check permission plugin configuration
+
+    4. **Try re-authenticating:**
+       - Have player log out and back in
+       - Use `/sclogin <password>` again
+
+    5. **Reload the plugin:**
+       ```bash
+       /sc reload
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Discord Webhook Issues
+
+<AccordionGroup>
+  <Accordion title="Discord notifications not sending">
+    **Symptoms:**
+    - No Discord messages appear
+    - Webhook seems to be configured correctly
+
+    **Solutions:**
+
+    1. **Verify Discord integration is enabled:**
+       ```yaml
+       # config.yml
+       discord:
+         enabled: true
+       ```
+
+    2. **Check webhook URLs:**
+       ```yaml
+       discord:
+         security-webhook-url: "https://discord.com/api/webhooks/..."
+         update-webhook-url: "https://discord.com/api/webhooks/..."
+       ```
+       - URLs must start with `https://discord.com/api/webhooks/`
+       - Must not be set to "none" or empty
+
+    3. **Test webhook manually:**
+       ```bash
+       curl -X POST -H "Content-Type: application/json" \
+         -d '{"content": "Test message"}' \
+         YOUR_WEBHOOK_URL
+       ```
+
+    4. **Check server logs:**
+       ```
+       [SecureCommands] Discord webhook sent successfully
+       [SecureCommands] Discord webhook failed with code: 404
+       ```
+
+    5. **Common webhook errors:**
+       - **404 Not Found:** Webhook was deleted or URL is incorrect
+       - **401 Unauthorized:** Invalid webhook URL
+       - **429 Too Many Requests:** Rate limited (wait and try again)
+
+    6. **Verify firewall/network:**
+       - Server must be able to make outbound HTTPS requests to Discord
+       - Check hosting provider's firewall rules
+  </Accordion>
+
+  <Accordion title="Webhook rate limiting">
+    **Symptoms:**
+    - Webhooks work initially but stop sending
+    - Error code 429 in logs
+
+    **Solutions:**
+
+    1. **Discord rate limits:**
+       - Maximum 30 requests per 60 seconds per webhook
+       - Maximum 5 requests per 2 seconds per webhook
+
+    2. **Reduce notification frequency:**
+       - This typically only happens with security alerts
+       - Consider batching alerts
+
+    3. **Use separate webhooks:**
+       - One for security alerts
+       - One for update notifications
+  </Accordion>
+</AccordionGroup>
+
+## Configuration Issues
+
+<AccordionGroup>
+  <Accordion title="Changes to config.yml not taking effect">
+    **Symptoms:**
+    - Modified config.yml but changes don't apply
+    - Plugin seems to use old configuration
+
+    **Solutions:**
+
+    1. **Reload the plugin:**
+       ```bash
+       /sc reload
+       ```
+
+    2. **Verify YAML syntax:**
+       - Use a YAML validator: https://www.yamllint.com/
+       - Check for proper indentation (2 spaces, not tabs)
+       - Ensure quotes around strings with special characters
+
+    3. **Restart the server:**
+       - Some changes may require a full restart
+       - Stop and start the server completely
+
+    4. **Check file permissions:**
+       ```bash
+       ls -l plugins/SecureCommands/config.yml
+       # Should be readable and writable by the server user
+       ```
+  </Accordion>
+
+  <Accordion title="Plugin generates new config.yml on startup">
+    **Symptoms:**
+    - Custom configuration is lost
+    - Plugin creates a fresh config.yml
+
+    **Solutions:**
+
+    1. **Backup your config:**
+       ```bash
+       cp plugins/SecureCommands/config.yml plugins/SecureCommands/config.yml.backup
+       ```
+
+    2. **Check for YAML syntax errors:**
+       - A malformed config.yml will be replaced
+       - Validate your YAML before restarting
+
+    3. **Restore from backup:**
+       ```bash
+       cp plugins/SecureCommands/config.yml.backup plugins/SecureCommands/config.yml
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Permission Issues
+
+<AccordionGroup>
+  <Accordion title="Admin commands not working">
+    **Symptoms:**
+    - `/sc` commands return "no permission" or don't execute
+    - Player has OP but commands still don't work
+
+    **Solutions:**
+
+    1. **Verify securecommands.admin permission:**
+       ```bash
+       # For LuckPerms
+       /lp user <player> permission check securecommands.admin
+       
+       # For PermissionsEx
+       /pex user <player> check securecommands.admin
+       ```
+
+    2. **Add player to whitelist:**
+       ```bash
+       /sc add <player>
+       ```
+       - OP alone is not enough; player must be whitelisted
+
+    3. **Check permission plugin priority:**
+       - SecureCommands requires the permission plugin to load first
+       - Check `loadbefore` or `depend` in plugin.yml
+
+    4. **Verify player is OP:**
+       ```bash
+       /op <player>
+       ```
+
+    5. **Check for permission negations:**
+       - Ensure permission plugin isn't explicitly denying the permission
+       ```bash
+       # LuckPerms
+       /lp user <player> permission unset securecommands.admin
+       /lp user <player> permission set securecommands.admin true
+       ```
+  </Accordion>
+
+  <Accordion title="Players automatically losing OP status">
+    **Symptoms:**
+    - Players are deoped on join
+    - Message: "Your OP status has been removed"
+
+    **Solutions:**
+
+    1. **This is a security feature:**
+       - Only whitelisted players can maintain OP status
+
+    2. **Add player to whitelist:**
+       ```bash
+       /sc add <player>
+       ```
+
+    3. **Verify whitelist in config.yml:**
+       ```yaml
+       whitelist:
+         - "PlayerName"
+       ```
+
+    4. **Reload after changes:**
+       ```bash
+       /sc reload
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Performance Issues
+
+<AccordionGroup>
+  <Accordion title="Server lag when players authenticate">
+    **Symptoms:**
+    - Server TPS drops when using `/sclogin`
+    - Brief freeze when players join
+
+    **Solutions:**
+
+    1. **BCrypt is CPU-intensive by design:**
+       - This is a security feature, not a bug
+       - The delay prevents brute-force attacks
+
+    2. **Optimize MySQL:**
+       - Add indexes to player_data table:
+       ```sql
+       ALTER TABLE player_data ADD INDEX idx_player_name (player_name);
+       ```
+
+    3. **Use a dedicated MySQL server:**
+       - Separate MySQL from game server if possible
+       - Reduces resource contention
+
+    4. **Monitor server resources:**
+       ```bash
+       top -p $(pgrep -f minecraft)
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Checking Logs
+
+### Important Log Messages
+
+**Successful startup:**
+```
+[SecureCommands] Connected to database successfully!
+[SecureCommands] Plugin enabled successfully
+[SecureCommands] Developed by Pablohs08
+```
+
+**Database errors:**
+```
+[SecureCommands] Could not connect to database: <error>
+[SecureCommands] Error creating table: <error>
+```
+
+**Authentication events:**
+```
+[SecureCommands] Player <name> authenticated successfully
+[SecureCommands] Authentication failed for <name>
+```
+
+**Security events:**
+```
+[SecureCommands] Removing OP status for player <name> because they are not on the whitelist
+[SecureCommands] <name> was kicked for logging in with a cracked client to a premium account
+```
+
+### Where to Find Logs
+
+```bash
+# Latest logs
+logs/latest.log
+
+# Previous session logs
+logs/2024-03-11-1.log.gz
+
+# Search for SecureCommands messages
+grep "SecureCommands" logs/latest.log
+
+# Search for errors
+grep "ERROR" logs/latest.log | grep "SecureCommands"
+```
+
+## Getting Help
+
+If you've tried the solutions above and still have issues:
+
+1. **Gather information:**
+   - Server version (Bukkit/Spigot/Paper)
+   - SecureCommands version
+   - Relevant log excerpts
+   - config.yml (remove sensitive passwords)
+
+2. **Check for updates:**
+   - Visit the SpigotMC resource page
+   - Download the latest version
+
+3. **Report bugs:**
+   - Post in the SpigotMC discussion thread
+   - Include all gathered information
+
+4. **Join the community:**
+   - Discord server (if available)
+   - SpigotMC forums
+
+<Warning>
+Never share your database password, Discord webhook URLs, or player passwords when asking for help.
+</Warning>

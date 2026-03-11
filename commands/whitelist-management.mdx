@@ -1,0 +1,121 @@
+---
+title: Whitelist Management
+description: Commands for managing the player whitelist
+---
+
+The whitelist system controls which players are allowed to set secure passwords and access blocked commands. Only whitelisted players can use the authentication system.
+
+## /sc add
+
+Add a player to the whitelist, granting them permission to set a secure password and access blocked commands after authentication.
+
+**Syntax:**
+```bash
+/sc add <player>
+```
+
+**Parameters:**
+- `<player>` - The name of the player to add to the whitelist
+
+**Permission:** Requires OP status or console access
+
+**Requirements:**
+- Sender must be an operator (OP) or console
+- Player name is case-insensitive
+
+**Examples:**
+
+```bash
+# Add Steve to the whitelist
+/sc add Steve
+
+# Add another player
+/sc add Alex
+```
+
+<Note>
+If the player is already whitelisted, you will receive an error message indicating they are already on the whitelist.
+</Note>
+
+<Note>
+The whitelist is saved to the configuration file immediately. After adding a player, they can use `/sc setcode <password>` to set their secure password.
+</Note>
+
+---
+
+## /sc remove
+
+Remove a player from the whitelist, revoking their access to the secure commands system.
+
+**Syntax:**
+```bash
+/sc remove <player>
+```
+
+**Parameters:**
+- `<player>` - The name of the player to remove from the whitelist
+
+**Permission:** Requires OP status or console access
+
+**Requirements:**
+- Sender must be an operator (OP) or console
+- Player name is case-insensitive
+
+**Examples:**
+
+```bash
+# Remove Steve from the whitelist
+/sc remove Steve
+
+# Remove another player
+/sc remove Alex
+```
+
+<Note>
+**Automatic OP Removal:** If the player is currently online and has OP status, removing them from the whitelist will automatically revoke their OP permissions for security purposes.
+</Note>
+
+<Note>
+If the player is not on the whitelist, you will receive an error message indicating they were not whitelisted.
+</Note>
+
+---
+
+## Whitelist Management Best Practices
+
+### Adding Players
+
+1. **Verify Identity:** Ensure you're adding the correct player
+2. **Set Password:** Instruct new players to use `/sc setcode <password>` after being added
+3. **Test Access:** Have the player test authentication with `/sclogin <password>`
+
+### Removing Players
+
+1. **Notify Player:** Inform the player before removing them (if applicable)
+2. **Check Online Status:** Be aware that online players will have their OP status removed automatically
+3. **Reset Password:** Consider using `/sc resetcode <player>` if you plan to re-add them later
+
+### Security Considerations
+
+<Note>
+**Keep Whitelist Minimal:** Only add players who absolutely need access to blocked commands. The smaller the whitelist, the more secure your server.
+</Note>
+
+### Viewing the Whitelist
+
+The whitelist is stored in your `config.yml` file under the `whitelist` section:
+
+```yaml
+whitelist:
+  - Steve
+  - Alex
+  - Notch
+```
+
+You can view or manually edit this list, but remember to use `/sc reload` after making manual changes.
+
+---
+
+## Tab Completion
+
+Both `/sc add` and `/sc remove` commands support tab completion for player names, showing all currently online players as suggestions.

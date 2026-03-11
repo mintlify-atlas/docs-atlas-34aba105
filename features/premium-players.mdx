@@ -1,0 +1,303 @@
+---
+title: "Premium Players"
+description: "Automatic authentication for premium Minecraft accounts using Mojang API verification"
+icon: "crown"
+---
+
+## Overview
+
+SecureCommands includes a **premium player detection system** that automatically authenticates players with genuine Minecraft accounts, eliminating the need for manual `/sclogin` authentication while maintaining security for offline-mode servers.
+
+<Note>
+Premium authentication only works on **offline-mode servers** (servers with `online-mode=false` in `server.properties`). On online-mode servers, all players are already verified by Mojang, and this feature is unnecessary.
+</Note>
+
+## How It Works
+
+The premium detection system uses the **Ashcon API** to verify if a player has a legitimate Minecraft account.
+
+### Authentication Flow
+
+<Steps>
+  <Step title="Player Joins Server">
+    When a whitelisted player joins an offline-mode server, SecureCommands adds them to the pending authentication queue
+  </Step>
+  <Step title="API Verification">
+    The plugin queries the Ashcon API asynchronously: `https://api.ashcon.app/mojang/v2/{playerName}`
+  </Step>
+  <Step title="Response Processing">
+    - **200 OK**: Player is premium → automatic authentication
+    - **404 Not Found**: Player is cracked → must use `/sclogin`
+    - **429 Rate Limited**: Fallback to manual authentication
+  </Step>
+  <Step title="Authentication Grant">
+    Premium players are automatically authenticated and can execute protected commands immediately
+  </Step>
+</Steps>
+
+### Implementation Details
+
+**Premium check on join** (`SecureCommands.java:205-227`):
+
+```java
+if (!Bukkit.getOnlineMode() && configManager.isPlayerWhitelisted(player.getName())) {
+    pendingAuthentication.add(player.getUniqueId());
+    
+    premiumChecker.checkPlayerPremium(player.getName(), isPremium -> {
+        Bukkit.getScheduler().runTask(this, () -> {
+            pendingAuthentication.remove(player.getUniqueId());
+            
+            if (isPremium) {
+                if (!playerDataManager.isPremiumCheckDisabled(player.getUniqueId())) {
+                    commandBlocker.authenticatePlayer(player.getUniqueId());
+                    player.sendMessage("You have been automatically authenticated as a premium user.");
+                } else {
+                    player.sendMessage("Premium check disabled. Login required.");
+                }
+            } else {
+                if (databaseManager.isPremiumAccount(player.getName())) {
+                    player.kickPlayer("It seems you are not a premium user. Please log in with the correct account.");
+                }
+            }
+        });
+    });
+}
+```
+
+**API verification** (`PremiumChecker.java:25-63`):
+
+```java
+public void checkPlayerPremium(String playerName, Callback<Boolean> callback) {
+    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        Boolean isPremium = Boolean.FALSE;
+        HttpURLConnection connection = null;
+        
+        try {
+            URL url = new URL(ASHCON_API_URL + playerName);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
+            
+            int responseCode = connection.getResponseCode();
+            isPremium = responseCode == HttpURLConnection.HTTP_OK ? Boolean.TRUE : Boolean.FALSE;
+            
+            if (responseCode == 429) {
+                plugin.getLogger().warning("Rate limited by Ashcon API while checking player: " + playerName);
+            }
+            
+            Player player = Bukkit.getPlayerExact(playerName);
+            if (player != null) {
+                premiumCache.put(player.getUniqueId(), isPremium);
+            }
+            
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to check premium status for player " + playerName + ": " + e.getMessage());
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+            callback.onResult(isPremium);
+        }
+    });
+}
+```
+
+## Premium Check Caching
+
+To reduce API calls and improve performance, premium status is **cached in memory**:
+
+```java PremiumChecker.java:19
+private final Map<UUID, Boolean> premiumCache = new ConcurrentHashMap<>();
+```
+
+### Cache Behavior
+
+- **Cache on verification**: When a player's premium status is checked, the result is stored in the cache
+- **Retrieve from cache**: The `isPremium(Player player)` method returns cached status
+- **Cache invalidation**: Cache is cleared when a player disconnects or premium check is disabled
+
+```java PremiumChecker.java:65-67
+public boolean isPremium(Player player) {
+    return premiumCache.getOrDefault(player.getUniqueId(), Boolean.FALSE);
+}
+```
+
+## Disabling Premium Check
+
+Administrators can disable premium authentication for specific players using the `/sc premium <player>` command. This is useful when:
+
+- A premium player wants to use password authentication
+- Premium verification is unreliable
+- You want to force manual authentication for specific users
+
+### Toggle Premium Check
+
+```bash
+/sc premium PlayerName
+```
+
+**Effect**:
+- If enabled → Disables premium check, player must use `/sclogin`
+- If disabled → Re-enables premium check, player will be auto-authenticated
+
+**Player data storage** (`PlayerDataManager.java`):
+
+```java
+public void setPremiumCheckDisabled(UUID playerUUID, boolean disabled) {
+    PlayerData data = playerDataMap.get(playerUUID);
+    if (data != null) {
+        data.setPremiumCheckDisabled(disabled);
+    }
+}
+```
+
+<Warning>
+Disabling premium check does NOT remove the player from the database or revoke their secure code. They will still need to authenticate with `/sclogin` if they have a secure code set.
+</Warning>
+
+## Security Features
+
+### Cracked Client Protection
+
+If a player with a **premium account in the database** tries to join with a **cracked client**, they are immediately kicked:
+
+```java SecureCommands.java:220-223
+if (databaseManager.isPremiumAccount(player.getName())) {
+    player.kickPlayer("It seems you are not a premium user. Please log in with the correct account.");
+    getLogger().info(player.getName() + " was kicked for logging in with a cracked client to a premium account.");
+}
+```
+
+This prevents account takeover attempts where an attacker tries to impersonate a premium player on an offline-mode server.
+
+### Pending Authentication Queue
+
+While premium status is being verified, players are added to a **pending authentication set**:
+
+```java SecureCommands.java:40
+private Set<UUID> pendingAuthentication = new HashSet<>();
+```
+
+**During pending state**, all commands are blocked:
+
+```java CommandBlocker.java:96-100
+if (plugin.getPendingAuthentication().contains(player.getUniqueId())) {
+    event.setCancelled(true);
+    player.sendMessage("Please wait, checking your authentication status...");
+    return;
+}
+```
+
+This prevents unauthorized command execution while the API check is in progress.
+
+## Rate Limiting
+
+The Ashcon API has rate limits to prevent abuse. SecureCommands handles rate limiting gracefully:
+
+### Response Code Handling
+
+- **200 OK**: Player is premium
+- **404 Not Found**: Player is cracked
+- **429 Too Many Requests**: Rate limited, fallback to manual auth
+
+```java PremiumChecker.java:40-42
+if (responseCode == 429) {
+    plugin.getLogger().warning("Rate limited by Ashcon API while checking player: " + playerName);
+}
+```
+
+<Info>
+If rate limited, players will need to authenticate manually with `/sclogin`. The plugin will attempt to verify premium status again on their next join.
+</Info>
+
+### Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Monitor API Calls" icon="chart-line">
+    Check logs for rate limit warnings. If frequent, consider implementing longer cache times or reducing whitelisted players.
+  </Card>
+  <Card title="Use Online Mode When Possible" icon="shield-check">
+    If your server doesn't require offline mode, enable `online-mode=true` in `server.properties` for built-in authentication.
+  </Card>
+  <Card title="Whitelist Premium Players" icon="list-check">
+    Only add trusted premium players to the whitelist to reduce unnecessary API calls.
+  </Card>
+  <Card title="Test Premium Detection" icon="vial">
+    Test with both premium and cracked accounts to ensure proper authentication flow.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<Accordion title="Premium player is not auto-authenticated">
+  Check the following:
+  
+  1. **Server is in offline mode**:
+     ```properties server.properties
+     online-mode=false
+     ```
+  
+  2. **Player is whitelisted** in `config.yml`:
+     ```yaml config.yml
+     whitelist:
+       - "PremiumPlayer"
+     ```
+  
+  3. **Premium check is not disabled**:
+     ```bash
+     /sc premium PremiumPlayer
+     # Should show "Premium check has been enabled"
+     ```
+  
+  4. **Check server logs** for API errors:
+     ```
+     [SecureCommands] Rate limited by Ashcon API while checking player: PremiumPlayer
+     [SecureCommands] Failed to check premium status for player PremiumPlayer
+     ```
+</Accordion>
+
+<Accordion title="Player kicked for 'not premium user'">
+  This occurs when:
+  
+  - Player has a premium account registered in the database
+  - Player tries to join with a cracked client
+  
+  **Solution**: Join with the legitimate premium Minecraft account, or ask an admin to disable premium check:
+  
+  ```bash
+  /sc premium PlayerName
+  ```
+</Accordion>
+
+<Accordion title="All players require manual authentication">
+  Premium authentication only works on **offline-mode servers**. Check:
+  
+  ```properties server.properties
+  online-mode=false
+  ```
+  
+  If `online-mode=true`, all players must authenticate through Mojang, and SecureCommands premium detection will not activate.
+</Accordion>
+
+<Accordion title="API check takes too long">
+  The API check has a 5-second timeout. If it frequently times out:
+  
+  1. **Check network connectivity** between server and Ashcon API
+  2. **Verify firewall rules** allow outbound HTTPS connections
+  3. **Consider disabling premium check** for affected players:
+     ```bash
+     /sc premium PlayerName
+     ```
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Command Protection" icon="shield" href="/features/command-protection">
+    Learn how command blocking and authentication work
+  </Card>
+  <Card title="Discord Notifications" icon="bell" href="/features/discord-notifications">
+    Set up alerts for failed logins and security events
+  </Card>
+</CardGroup>

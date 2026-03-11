@@ -1,0 +1,382 @@
+---
+title: "Discord Notifications"
+description: "Real-time security alerts and update notifications via Discord webhooks"
+icon: "bell"
+---
+
+## Overview
+
+SecureCommands integrates with Discord to send **real-time notifications** for security events and plugin updates. Using Discord webhooks, you can monitor failed login attempts, blocked commands, and new plugin versions directly in your Discord server.
+
+## Webhook Types
+
+SecureCommands supports **two types of webhooks**:
+
+<CardGroup cols={2}>
+  <Card title="Security Webhook" icon="shield-exclamation">
+    Sends alerts for:
+    - Failed login attempts
+    - Blocked command executions
+    - Authentication failures
+  </Card>
+  <Card title="Update Webhook" icon="download">
+    Sends notifications for:
+    - New plugin versions
+    - Available updates from Spigot
+  </Card>
+</CardGroup>
+
+## Configuration
+
+Configure Discord webhooks in `config.yml`:
+
+```yaml config.yml
+discord:
+  # Enable or disable all Discord notifications
+  enabled: false
+  
+  # Webhook to notify about plugin updates
+  update-webhook-url: "YOUR_UPDATES_WEBHOOK_HERE"
+  
+  # Webhook to notify about security events (blocked commands, failed logins)
+  security-webhook-url: "YOUR_SECURITY_WEBHOOK_HERE"
+```
+
+### Configuration Fields
+
+<ParamField path="discord.enabled" type="boolean" default="false" required>
+  Master switch for all Discord notifications. If `false`, no webhooks will be sent regardless of URL configuration.
+</ParamField>
+
+<ParamField path="discord.update-webhook-url" type="string" required>
+  Discord webhook URL for update notifications. Get this from your Discord server's channel settings.
+</ParamField>
+
+<ParamField path="discord.security-webhook-url" type="string" required>
+  Discord webhook URL for security alerts. Can be the same as update webhook, but separate channels are recommended.
+</ParamField>
+
+## Setting Up Discord Webhooks
+
+<Steps>
+  <Step title="Create a Webhook in Discord">
+    1. Open your Discord server
+    2. Right-click the channel where you want notifications
+    3. Select **Edit Channel** → **Integrations** → **Webhooks**
+    4. Click **New Webhook**
+    5. Give it a name (e.g., "SecureCommands Security")
+    6. Copy the **Webhook URL**
+  </Step>
+  
+  <Step title="Add Webhook URL to Config">
+    Paste the webhook URL into `config.yml`:
+    
+    ```yaml
+    discord:
+      enabled: true
+      security-webhook-url: "https://discord.com/api/webhooks/123456789/ABCdefGHIjklMNOpqrSTUvwxYZ"
+    ```
+  </Step>
+  
+  <Step title="Reload the Plugin">
+    Reload SecureCommands to apply the configuration:
+    
+    ```bash
+    /sc reload
+    ```
+  </Step>
+  
+  <Step title="Test the Webhook">
+    Trigger a test notification by attempting a failed login or blocked command
+  </Step>
+</Steps>
+
+<Warning>
+Never share your webhook URLs publicly. Anyone with the URL can send messages to your Discord channel.
+</Warning>
+
+## Security Notifications
+
+### Failed Login Attempts
+
+When a player enters an incorrect password, a security alert is sent to Discord:
+
+**Alert format**:
+- **Title**: 🚫 Security Alert 🚫
+- **Description**: Player name and attempted password
+- **Color**: Red (0xFF0000)
+
+**Implementation** (`LoginCommandExecutor.java:45-56`):
+
+```java
+if (plugin.getDatabaseManager().isSecureCodeCorrect(playerName, password)) {
+    plugin.getCommandBlocker().authenticatePlayer(player.getUniqueId());
+    player.sendMessage("You are now authenticated!");
+} else {
+    player.sendMessage("Incorrect code.");
+    
+    String alertTitle = plugin.getMessagesManager().getMessage("system.discord_alert_title");
+    String alertMessage = plugin.getMessagesManager().getMessage("system.discord_alert_message",
+        "%player%", playerName,
+        "%password%", password);
+    plugin.getDiscordNotifier().sendSecurityAlert(alertTitle, alertMessage);
+}
+```
+
+### Blocked Command Attempts
+
+When an unauthenticated player tries to execute a protected command:
+
+**Alert format**:
+- **Title**: 🚨 Command Blocked 🚨
+- **Description**: Player name and attempted command
+- **Color**: Red (0xFF0000)
+
+**Implementation** (`CommandBlocker.java:115-119`):
+
+```java
+String blockedTitle = plugin.getMessagesManager().getMessage("system.discord_blocked_title");
+String blockedMessage = plugin.getMessagesManager().getMessage("system.discord_blocked_message",
+    "%player%", player.getName(),
+    "%command%", event.getMessage());
+plugin.getDiscordNotifier().sendSecurityAlert(blockedTitle, blockedMessage);
+```
+
+**Example Discord message**:
+
+```
+🚨 Command Blocked 🚨
+Player ExamplePlayer tried to use a protected command: /op ExamplePlayer
+```
+
+## Update Notifications
+
+### Version Check
+
+SecureCommands automatically checks for updates from **Spigot** on startup using the Spigot API:
+
+```java SecureCommands.java:94-119
+private void checkForUpdates() {
+    Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+        try {
+            URL url = new URL("https://api.spigotmc.org/simple/0.1/index.php?action=getResource&id=128091");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            
+            Scanner scanner = new Scanner(conn.getInputStream());
+            String response = scanner.useDelimiter("\\A").next();
+            scanner.close();
+            
+            String latestVersion = response.trim();
+            String currentVersion = getDescription().getVersion();
+            
+            if (!currentVersion.equalsIgnoreCase(latestVersion)) {
+                getLogger().info("A new version of SecureCommands is available: " + latestVersion);
+                
+                String jsonPayload = "{ \"current_version\": \"" + latestVersion + 
+                    "\", \"title\": \"New Update\", \"tag\": \"v" + latestVersion + 
+                    "\", \"id\": \"128091\" }";
+                discordNotifier.sendUpdateNotification(jsonPayload);
+            }
+        } catch (Exception e) {
+            getLogger().warning("Could not check for updates: " + e.getMessage());
+        }
+    });
+}
+```
+
+### Update Alert Format
+
+**Embed format** (`DiscordNotifier.java:42-49`):
+
+```json
+{
+  "title": "🚀 New SecureCommands Update Available!",
+  "description": "**New Update**\nv2.4\n\n🔹 Current version: `2.3`\n🔹 Latest version: `2.4`\n🔹 [Update here](https://www.spigotmc.org/resources/128091/)",
+  "color": 65280
+}
+```
+
+**Example Discord message**:
+
+```
+🚀 New SecureCommands Update Available!
+New Update
+v2.4
+
+🔹 Current version: 2.3
+🔹 Latest version: 2.4
+🔹 Update here (link to Spigot)
+```
+
+<Info>
+Update checks run asynchronously on server startup and do not impact server performance.
+</Info>
+
+## Implementation Details
+
+### Webhook Sending
+
+All webhooks are sent **asynchronously** to prevent blocking the main server thread:
+
+```java DiscordNotifier.java:90-113
+private void sendWebhookMessage(String webhookUrl, String jsonPayload) {
+    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        try {
+            URL url = new URL(webhookUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Content-Type", "application/json");
+            
+            try (OutputStream os = connection.getOutputStream()) {
+                os.write(jsonPayload.getBytes(StandardCharsets.UTF_8));
+            }
+            
+            int responseCode = connection.getResponseCode();
+            if (responseCode >= 200 && responseCode < 300) {
+                plugin.getLogger().info("Discord notification sent successfully.");
+            } else {
+                plugin.getLogger().warning("Discord notification failed with response code: " + responseCode);
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Could not send Discord webhook: " + e.getMessage());
+        }
+    });
+}
+```
+
+### JSON Payload Format
+
+**Security alert**:
+
+```json
+{
+  "embeds": [
+    {
+      "title": "🚨 Command Blocked 🚨",
+      "description": "Player ExamplePlayer tried: /op ExamplePlayer",
+      "color": 16711680
+    }
+  ]
+}
+```
+
+**Update notification**:
+
+```json
+{
+  "embeds": [
+    {
+      "title": "🚀 New SecureCommands Update Available!",
+      "description": "**New Update**\nv2.4\n\n🔹 Current version: `2.3`\n🔹 Latest version: `2.4`\n🔹 [Update here](https://www.spigotmc.org/resources/128091/)",
+      "color": 65280
+    }
+  ]
+}
+```
+
+## Channel Recommendations
+
+<CardGroup cols={2}>
+  <Card title="Security Channel" icon="shield-halved">
+    Create a **private admin channel** for security alerts. Restrict access to trusted staff only.
+  </Card>
+  <Card title="Updates Channel" icon="bell">
+    Use a **public or staff-only channel** for update notifications. This can be visible to all moderators.
+  </Card>
+  <Card title="Same Channel" icon="message">
+    For small servers, you can use the same webhook URL for both security and updates.
+  </Card>
+  <Card title="Separate Webhooks" icon="split">
+    For large servers, use different channels to organize notifications by type and importance.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<Accordion title="No notifications are being sent">
+  Check the following:
+  
+  1. **Discord notifications are enabled**:
+     ```yaml config.yml
+     discord:
+       enabled: true
+     ```
+  
+  2. **Webhook URL is configured**:
+     ```yaml
+     security-webhook-url: "https://discord.com/api/webhooks/..."
+     ```
+  
+  3. **Check server logs** for webhook errors:
+     ```
+     [SecureCommands] Discord notification failed with response code: 404
+     [SecureCommands] Could not send Discord webhook: Connection refused
+     ```
+  
+  4. **Test the webhook URL** in a browser or with curl:
+     ```bash
+     curl -X POST "YOUR_WEBHOOK_URL" \
+       -H "Content-Type: application/json" \
+       -d '{"content": "Test message"}'
+     ```
+</Accordion>
+
+<Accordion title="Webhook returns 404 error">
+  The webhook URL is invalid or has been deleted. Common causes:
+  
+  - Webhook was deleted from Discord channel settings
+  - URL was copied incorrectly (missing characters)
+  - Channel was deleted
+  
+  **Solution**: Create a new webhook in Discord and update `config.yml`.
+</Accordion>
+
+<Accordion title="Webhook returns 429 (rate limited)">
+  Discord rate limits webhooks to prevent spam. If you receive many alerts quickly:
+  
+  - **Wait a few minutes** for the rate limit to reset
+  - **Reduce alert frequency** by limiting blocked commands
+  - **Use multiple webhooks** for different alert types
+  
+  Discord webhook rate limits:
+  - **30 requests per minute** per webhook
+  - **5 requests per 5 seconds** per webhook
+</Accordion>
+
+<Accordion title="Messages are not formatted correctly">
+  SecureCommands uses Discord's **embed format** for rich messages. If embeds don't display:
+  
+  - Ensure the webhook URL is correct
+  - Check that your Discord client supports embeds (some mobile clients have issues)
+  - Verify JSON payload format in server logs
+</Accordion>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Restrict Security Channel" icon="lock">
+    Make security alert channels private and visible only to trusted admins to prevent information leakage.
+  </Card>
+  <Card title="Monitor Alerts Regularly" icon="eye">
+    Check security alerts daily to identify suspicious patterns or repeated unauthorized access attempts.
+  </Card>
+  <Card title="Test Webhooks" icon="vial">
+    Test your webhook configuration after setup by triggering a failed login or blocked command.
+  </Card>
+  <Card title="Use Mentions Sparingly" icon="at">
+    Avoid @everyone or @here mentions in webhooks to prevent notification spam.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Command Protection" icon="shield" href="/features/command-protection">
+    Learn how command blocking triggers Discord alerts
+  </Card>
+  <Card title="Multi-Language" icon="globe" href="/features/multi-language">
+    Customize alert messages for different languages
+  </Card>
+</CardGroup>

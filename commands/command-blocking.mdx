@@ -1,0 +1,172 @@
+---
+title: Command Blocking
+description: Commands for managing blocked commands that require authentication
+---
+
+The command blocking system allows you to specify which commands require authentication. Players must be authenticated (logged in) to execute blocked commands.
+
+## /sc addcommand
+
+Add a command to the blocked commands list. Once added, players must authenticate using `/sclogin` before they can execute this command.
+
+**Syntax:**
+```bash
+/sc addcommand <command>
+```
+
+**Parameters:**
+- `<command>` - The command to block (with or without the leading `/`)
+
+**Permission:** Requires OP status or console access
+
+**Requirements:**
+- Sender must be an operator (OP) or console
+
+**Examples:**
+
+```bash
+# Block the /op command
+/sc addcommand op
+
+# Block with leading slash (automatically removed)
+/sc addcommand /deop
+
+# Block plugin commands
+/sc addcommand plugins
+/sc addcommand bukkit:plugins
+
+# Block economy commands
+/sc addcommand eco
+/sc addcommand balance
+```
+
+<Note>
+**Leading Slash:** You can specify commands with or without the leading `/`. The plugin automatically removes it if present, storing commands in lowercase without the slash.
+</Note>
+
+<Note>
+If the command is already in the blocked list, you will receive an error message indicating it's already blocked.
+</Note>
+
+---
+
+## /sc removecommand
+
+Remove a command from the blocked commands list, allowing all players to execute it without authentication.
+
+**Syntax:**
+```bash
+/sc removecommand <command>
+```
+
+**Parameters:**
+- `<command>` - The command to unblock (with or without the leading `/`)
+
+**Permission:** Requires OP status or console access
+
+**Requirements:**
+- Sender must be an operator (OP) or console
+
+**Examples:**
+
+```bash
+# Unblock the /plugins command
+/sc removecommand plugins
+
+# Unblock with leading slash
+/sc removecommand /op
+
+# Unblock multiple commands
+/sc removecommand deop
+/sc removecommand eco
+```
+
+<Note>
+If the command is not in the blocked list, you will receive an error message indicating it's not currently blocked.
+</Note>
+
+---
+
+## Command Blocking Best Practices
+
+### Recommended Commands to Block
+
+Here are common commands you should consider blocking for security:
+
+```bash
+# Administrative commands
+/sc addcommand op
+/sc addcommand deop
+/sc addcommand stop
+/sc addcommand reload
+
+# Plugin management
+/sc addcommand plugins
+/sc addcommand bukkit:plugins
+/sc addcommand pl
+/sc addcommand plugman
+
+# World management
+/sc addcommand save-all
+/sc addcommand save-on
+/sc addcommand save-off
+
+# Permission commands (if using permission plugin)
+/sc addcommand perm
+/sc addcommand lp
+/sc addcommand permissions
+```
+
+### Testing Blocked Commands
+
+1. **Add the command** to the blocked list
+2. **Test unauthenticated:** Try to run the command without logging in - it should be blocked
+3. **Authenticate:** Use `/sclogin <password>`
+4. **Test authenticated:** The command should now work
+
+### Command Aliases
+
+<Note>
+**Plugin Aliases:** Remember to block all aliases of a command. For example, `/plugins` can also be accessed via `/pl` and `/bukkit:plugins`. Block all variants for complete protection.
+</Note>
+
+### Viewing Blocked Commands
+
+The blocked commands list is stored in your `config.yml` file:
+
+```yaml
+blockedCommands:
+  - op
+  - deop
+  - plugins
+  - pl
+  - bukkit:plugins
+  - stop
+  - reload
+```
+
+You can view or manually edit this list, but remember to use `/sc reload` after making manual changes.
+
+---
+
+## How Command Blocking Works
+
+### Authentication Check
+
+When a player attempts to execute a blocked command:
+
+1. **Plugin checks** if the command is in the blocked list
+2. **Verifies authentication** status of the player
+3. **Allows or denies** based on authentication
+4. **Sends message** to inform the player if blocked
+
+### Bypass Conditions
+
+Players can bypass command blocking if:
+- They have authenticated using `/sclogin <password>`
+- They have premium status enabled via `/sc premium <player>`
+- The command is not in the blocked commands list
+
+<Note>
+**Session Persistence:** Authentication status is maintained until the player disconnects from the server. Players need to re-authenticate after each login.
+</Note>

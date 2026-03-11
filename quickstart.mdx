@@ -1,80 +1,381 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Quick Start"
+description: "Get started with SecureCommands in minutes - from installation to first authentication"
+icon: "rocket"
 ---
 
-## Get started in three steps
+## Prerequisites
 
-Get your documentation site running locally and make your first customization.
+Before you begin, ensure you have:
 
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+- Spigot or Paper server running version 1.18.2 or higher
+- Java 17 or higher installed
+- MySQL database server
+- Server admin/OP access
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+If you haven't installed SecureCommands yet, check out the [Installation Guide](/installation) first.
 </Note>
+
+## Step 1: Configure Your First Protected Command
+
+Let's start by protecting the `/op` command to prevent unauthorized operator access.
+
+<Steps>
+  <Step title="Edit config.yml">
+    Open `plugins/SecureCommands/config.yml` and configure the blocked commands:
+    
+    ```yaml config.yml
+    # Commands to protect
+    blocked-commands:
+      - "/op"
+      - "/deop"
+      - "/ban"
+      - "/pardon"
+    ```
+  </Step>
+  
+  <Step title="Add yourself to the whitelist">
+    Add your username to the whitelist so you can set up authentication:
+    
+    ```yaml config.yml
+    whitelist:
+      - "YourUsername"
+    ```
+  </Step>
+  
+  <Step title="Reload the plugin">
+    Apply the configuration changes:
+    
+    ```bash
+    /sc reload
+    ```
+  </Step>
+</Steps>
+
+## Step 2: Set Up Your Secure Code
+
+Now that you're whitelisted, create your authentication password.
+
+```bash
+/sc setcode MySecurePassword123
+```
+
+**Response**:
+```
+[SecureCommands] Secure code set successfully.
+```
+
+<Warning>
+Choose a strong password with at least 8 characters, mixing letters, numbers, and symbols. This password is hashed using BCrypt and cannot be recovered if lost.
+</Warning>
+
+## Step 3: Authenticate
+
+Now test the authentication system by trying to execute a protected command:
+
+```bash
+# Try to execute a blocked command without authentication
+/op SomePlayer
+```
+
+**Response**:
+```
+[SecureCommands] This command is protected. Please use /sclogin <password>.
+```
+
+**Authenticate with your secure code**:
+
+```bash
+/sclogin MySecurePassword123
+```
+
+**Response**:
+```
+[SecureCommands] You are now authenticated!
+```
+
+Now you can execute protected commands until you disconnect or the server restarts.
+
+## Step 4: Add Other Players
+
+Add trusted staff members to the whitelist and have them set up their own secure codes.
+
+### Using In-Game Commands
+
+```bash
+# Add a player to the whitelist
+/sc add StaffMember1
+
+# The player can now set their own secure code
+# (StaffMember1 runs this)
+/sc setcode TheirSecurePassword456
+```
+
+### Using Configuration File
+
+Edit `config.yml`:
+
+```yaml config.yml
+whitelist:
+  - "YourUsername"
+  - "StaffMember1"
+  - "StaffMember2"
+```
+
+Then reload:
+
+```bash
+/sc reload
+```
+
+## Common Workflows
+
+### Authenticating After Join
+
+Every time you join the server, you'll need to authenticate before using protected commands:
+
+<Steps>
+  <Step title="Join the server">
+    Connect to your Minecraft server
+  </Step>
+  
+  <Step title="Authenticate">
+    Run the login command:
+    
+    ```bash
+    /sclogin YourPassword
+    ```
+  </Step>
+  
+  <Step title="Execute protected commands">
+    You can now use `/op`, `/ban`, and other blocked commands until you disconnect
+  </Step>
+</Steps>
+
+### Removing a Player's Access
+
+If you need to revoke someone's access:
+
+```bash
+# Remove from whitelist
+/sc remove StaffMember1
+
+# Reset their secure code
+/sc resetcode StaffMember1
+```
+
+<Info>
+Removing a player from the whitelist also revokes their OP status automatically if they have it.
+</Info>
+
+### Blocking Additional Commands
+
+Add more commands to the protection list:
+
+```bash
+# Add a command to the blocked list
+/sc addcommand /gamemode
+
+# Remove a command from the blocked list
+/sc removecommand /gamemode
+```
+
+Or edit `config.yml` directly:
+
+```yaml config.yml
+blocked-commands:
+  - "/op"
+  - "/deop"
+  - "/ban"
+  - "/pardon"
+  - "/gamemode"
+  - "/give"
+  - "/tp"
+```
+
+## Premium Player Auto-Authentication
+
+If you're running an **offline-mode server**, premium Minecraft accounts can be automatically authenticated.
+
+### How It Works
+
+<Steps>
+  <Step title="Premium player joins">
+    When a whitelisted player with a legitimate Minecraft account joins, SecureCommands checks their premium status via the Mojang API
+  </Step>
+  
+  <Step title="Automatic authentication">
+    If verified as premium, they're automatically authenticated without needing `/sclogin`
+  </Step>
+  
+  <Step title="Execute commands">
+    Premium players can immediately use protected commands
+  </Step>
+</Steps>
+
+### Disabling Premium Check
+
+If you want a premium player to use password authentication instead:
+
+```bash
+/sc premium PlayerName
+```
+
+This toggles the premium check on/off for that player.
+
+<Note>
+Learn more about premium player features in the [Premium Players](/features/premium-players) guide.
+</Note>
+
+## Discord Notifications
+
+Set up Discord alerts to monitor security events in real-time.
+
+### Quick Setup
+
+<Steps>
+  <Step title="Create a Discord webhook">
+    In your Discord server, go to a channel → **Edit Channel** → **Integrations** → **Webhooks** → **New Webhook**
+  </Step>
+  
+  <Step title="Copy the webhook URL">
+    Copy the webhook URL from Discord
+  </Step>
+  
+  <Step title="Add to config.yml">
+    ```yaml config.yml
+    discord:
+      enabled: true
+      security-webhook-url: "YOUR_WEBHOOK_URL_HERE"
+    ```
+  </Step>
+  
+  <Step title="Reload the plugin">
+    ```bash
+    /sc reload
+    ```
+  </Step>
+</Steps>
+
+Now you'll receive Discord alerts for:
+- Failed login attempts
+- Blocked command executions
+- Plugin updates
+
+<Card
+  title="Discord Notifications Guide"
+  icon="bell"
+  href="/features/discord-notifications"
+>
+  Learn more about Discord webhook integration and alert types
+</Card>
+
+## Testing Your Setup
+
+Verify everything is working correctly:
+
+<Steps>
+  <Step title="Test command blocking">
+    Without authenticating, try a blocked command:
+    
+    ```bash
+    /op TestPlayer
+    ```
+    
+    **Expected**: Command blocked, message shown
+  </Step>
+  
+  <Step title="Test authentication">
+    Authenticate with your secure code:
+    
+    ```bash
+    /sclogin YourPassword
+    ```
+    
+    **Expected**: Success message
+  </Step>
+  
+  <Step title="Test command execution">
+    Execute the blocked command again:
+    
+    ```bash
+    /op TestPlayer
+    ```
+    
+    **Expected**: Command executes successfully
+  </Step>
+  
+  <Step title="Test failed login">
+    Reconnect and try an incorrect password:
+    
+    ```bash
+    /sclogin WrongPassword
+    ```
+    
+    **Expected**: Error message + Discord alert (if configured)
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<Accordion title="Commands are still blocked after authentication">
+  Make sure you received the success message after `/sclogin`. If not:
+  
+  - Check that you're whitelisted in `config.yml`
+  - Verify your secure code is set with `/sc setcode`
+  - Ensure the password is correct (case-sensitive)
+  - Check server logs for authentication errors
+</Accordion>
+
+<Accordion title="Can't set a secure code">
+  Common issues:
+  
+  - **Not whitelisted**: Add yourself to the whitelist in `config.yml`
+  - **Already have a code**: Use `/sc resetcode YourName` (console only) to reset
+  - **Premium player**: Premium players don't need secure codes for auto-authentication
+</Accordion>
+
+<Accordion title="Database connection failed">
+  If you see database errors on startup:
+  
+  1. Verify MySQL is running
+  2. Check database credentials in `config.yml`
+  3. Ensure the database exists: `CREATE DATABASE secure_commands;`
+  4. Verify user has permissions: `GRANT ALL PRIVILEGES ON secure_commands.* TO 'user'@'localhost';`
+  
+  See the [Database Configuration](/configuration/database) guide for detailed setup.
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Command Reference"
+    icon="terminal"
+    href="/commands/overview"
+  >
+    Explore all available commands and their options
+  </Card>
+  <Card
+    title="Configuration Guide"
+    icon="gear"
+    href="/configuration/database"
+  >
+    Learn about advanced configuration options
+  </Card>
+  <Card
+    title="Security Best Practices"
+    icon="shield"
+    href="/advanced/security"
+  >
+    Secure your server with recommended settings
+  </Card>
+  <Card
+    title="Features Overview"
+    icon="star"
+    href="/features/command-protection"
+  >
+    Discover all SecureCommands features
+  </Card>
+</CardGroup>

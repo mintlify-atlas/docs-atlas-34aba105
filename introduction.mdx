@@ -1,0 +1,93 @@
+---
+title: Introduction
+description: Secure your server's critical commands with password protection and whitelist management
+---
+
+## What is SecureCommands?
+
+SecureCommands is a powerful Minecraft plugin designed to protect your server's most critical commands from unauthorized access. Whether you're running a Spigot or Paper server, SecureCommands adds an essential security layer by requiring authentication before executing protected commands.
+
+<Note>
+  SecureCommands v2.3 is compatible with Minecraft 1.18.2+ and requires Java 17 or higher.
+</Note>
+
+## Why SecureCommands?
+
+Server security is crucial, especially when dealing with powerful administrative commands. SecureCommands solves common security challenges:
+
+- **Prevent Unauthorized Access**: Block dangerous commands like `/op`, `/ban`, and `/kick` until users authenticate
+- **Whitelist System**: Control exactly who can access protected commands
+- **Session-Based Authentication**: Users authenticate once per session using `/sclogin`
+- **Premium Account Detection**: Automatically authenticate premium (paid) Minecraft accounts
+- **Discord Integration**: Receive real-time security alerts when someone tries to use protected commands
+- **OP Status Protection**: Automatically remove OP status from non-whitelisted players
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Command Protection" icon="shield">
+    Protect any command with password authentication. Configure commands like `/op`, `/ban`, `/stop`, and more in your config file.
+  </Card>
+  
+  <Card title="Whitelist Management" icon="users">
+    Maintain a whitelist of trusted players who can set secure codes and access protected commands.
+  </Card>
+  
+  <Card title="MySQL Database" icon="database">
+    All secure codes are stored in a MySQL database with encryption, ensuring data persistence across server restarts.
+  </Card>
+  
+  <Card title="Multi-Language Support" icon="globe">
+    Built-in support for 8 languages: English, Spanish, French, German, Polish, Italian, Brazilian Portuguese, and Russian.
+  </Card>
+  
+  <Card title="Discord Notifications" icon="bell">
+    Get instant Discord webhook notifications for security events and plugin updates.
+  </Card>
+  
+  <Card title="Premium Detection" icon="star">
+    Automatically authenticate premium Minecraft accounts without requiring manual login.
+  </Card>
+</CardGroup>
+
+## How It Works
+
+SecureCommands operates on a simple but effective security model:
+
+<Steps>
+  <Step title="Configure Protected Commands">
+    Define which commands require authentication in your `config.yml` file.
+  </Step>
+  
+  <Step title="Whitelist Trusted Players">
+    Add players to the whitelist using `/sc add <player>`.
+  </Step>
+  
+  <Step title="Players Set Secure Codes">
+    Whitelisted players create their own secure codes with `/sc setcode <password>`.
+  </Step>
+  
+  <Step title="Authentication Required">
+    When a player tries to use a protected command, they must first authenticate using `/sclogin <password>`.
+  </Step>
+  
+  <Step title="Session-Based Access">
+    Once authenticated, players can use protected commands until they disconnect from the server.
+  </Step>
+</Steps>
+
+<Warning>
+  Protected commands cannot be executed until the player authenticates each session. This ensures maximum security even if someone gains temporary access to a player's account.
+</Warning>
+
+## Use Cases
+
+**Staff Management**: Perfect for servers with multiple staff members where you want to ensure only authorized personnel can execute critical commands.
+
+**Development Servers**: Ideal for development environments where multiple developers need controlled access to administrative commands.
+
+**Security-Conscious Servers**: Essential for any server that takes security seriously and wants an additional layer of protection beyond standard permissions.
+
+## What's Next?
+
+Ready to secure your server? Continue to the [Installation](/installation) guide to get started, or jump to the [Quick Start](/quickstart) guide to set up your first protected command.

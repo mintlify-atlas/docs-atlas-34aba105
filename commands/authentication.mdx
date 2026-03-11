@@ -1,0 +1,108 @@
+---
+title: Authentication Commands
+description: Commands for player authentication and password management
+---
+
+SecureCommands uses a password-based authentication system to protect sensitive commands. Players must set a secure password and authenticate before using blocked commands.
+
+## /sclogin
+
+Authenticate yourself by entering your secure password to unlock access to blocked commands.
+
+**Syntax:**
+```bash
+/sclogin <password>
+```
+
+**Parameters:**
+- `<password>` - Your secure password that was set using `/sc setcode`
+
+**Requirements:**
+- Player must be whitelisted
+- Player must have already set a secure password using `/sc setcode`
+
+**Examples:**
+
+```bash
+# Authenticate with your password
+/sclogin mySecurePass123
+```
+
+<Note>
+**Security Feature:** If an incorrect password is entered, a security alert can be sent to Discord (if configured), including the player name and attempted password.
+</Note>
+
+---
+
+## /sc setcode
+
+Set your secure password for authentication. This must be done before you can use `/sclogin`.
+
+**Syntax:**
+```bash
+/sc setcode <password>
+```
+
+**Parameters:**
+- `<password>` - The password you want to set for authentication
+
+**Requirements:**
+- Player must be whitelisted
+- Player must not already have a password set
+- Player must not be premium (if premium status is enabled)
+
+**Permission:** `securecommands.admin`
+
+**Examples:**
+
+```bash
+# Set your secure password
+/sc setcode mySecurePassword123
+```
+
+<Note>
+**Important:** A password can only be set once. To reset it, an administrator must use `/sc resetcode <player>` from the console.
+</Note>
+
+<Note>
+**Premium Players:** Players with premium status enabled do not need to set or use passwords - they have automatic access to blocked commands.
+</Note>
+
+---
+
+## /sc premium
+
+Toggle the premium check status for a player. When premium status is disabled for a player, they bypass the password authentication system entirely.
+
+**Syntax:**
+```bash
+/sc premium <player>
+```
+
+**Parameters:**
+- `<player>` - The name of the player to toggle premium status for
+
+**Requirements:**
+- Player must be authenticated (logged in)
+- Target player must be online
+- Sender must be OP or console
+
+**Permission:** Requires OP or console access
+
+**Examples:**
+
+```bash
+# Toggle premium status for Steve
+/sc premium Steve
+
+# Toggle it again to revert
+/sc premium Steve
+```
+
+<Note>
+This command toggles between enabled and disabled states. If premium check is currently enabled for a player, it will be disabled, and vice versa.
+</Note>
+
+<Note>
+The premium status is persistent and saved to the player data file, so it persists across server restarts.
+</Note>

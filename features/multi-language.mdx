@@ -1,0 +1,397 @@
+---
+title: "Multi-Language Support"
+description: "Support for 8 languages with customizable messages and color codes"
+icon: "globe"
+---
+
+## Overview
+
+SecureCommands includes **built-in support for 8 languages**, allowing you to provide localized messages to players in their native language. All plugin messages, including errors, success notifications, and system messages, are fully translatable.
+
+## Supported Languages
+
+SecureCommands comes with pre-configured language files for:
+
+| Language Code | Language | File |
+|---------------|----------|------|
+| `en` | English | `lang/en.yml` |
+| `es` | Spanish (Español) | `lang/es.yml` |
+| `fr` | French (Français) | `lang/fr.yml` |
+| `de` | German (Deutsch) | `lang/de.yml` |
+| `pl` | Polish (Polski) | `lang/pl.yml` |
+| `it` | Italian (Italiano) | `lang/it.yml` |
+| `br` | Portuguese (Português Brasileiro) | `lang/br.yml` |
+| `ru` | Russian (Русский) | `lang/ru.yml` |
+
+<Info>
+All language files are automatically created in the `plugins/SecureCommands/lang/` directory when the plugin first loads.
+</Info>
+
+## Configuration
+
+Set your preferred language in `config.yml`:
+
+```yaml config.yml
+# Plugin language setting
+# Available languages: en, es, fr, de, pl, it, br, ru
+language: "en"
+```
+
+### Changing Language
+
+<Steps>
+  <Step title="Edit config.yml">
+    Open `plugins/SecureCommands/config.yml` and change the `language` value:
+    
+    ```yaml
+    language: "es"  # Change to Spanish
+    ```
+  </Step>
+  
+  <Step title="Reload the Plugin">
+    Reload SecureCommands to apply the language change:
+    
+    ```bash
+    /sc reload
+    ```
+  </Step>
+  
+  <Step title="Verify Language Change">
+    Test a command to see the new language messages:
+    
+    ```bash
+    /sclogin wrongpassword
+    ```
+    
+    You should see error messages in the selected language.
+  </Step>
+</Steps>
+
+<Warning>
+If you specify an invalid language code, SecureCommands will automatically fall back to English (`en`) and log a warning.
+</Warning>
+
+## Language File Structure
+
+Each language file follows the same YAML structure:
+
+```yaml lang/en.yml
+# Prefix to be added to all plugin messages
+prefix: '&b[SecureCommands] &r'
+
+# ⚠️ Error and Warning Messages ⚠️
+errors:
+  no_permission: "&cYou do not have permission to use this command."
+  only_players: '&cOnly players can execute this command.'
+  not_whitelisted: '%prefix%&cYou are not on the whitelist.'
+  not_authenticated: '%prefix%&cThis command is protected. Please use &a/sclogin <password>&c.'
+  invalid_code: '%prefix%&cIncorrect code.'
+
+# ✅ Success Messages ✅
+success:
+  authenticated: '%prefix%&aYou are now authenticated!'
+  logged_in: '%prefix%&aLogged in successfully!'
+  code_set: '%prefix%&aSecure code set successfully.'
+
+# 🤖 System and Special Messages 🤖
+system:
+  enabled: '&aSecureCommands enabled!'
+  disabled: '&cSecureCommands disabled!'
+  db_connected: 'Connected to database successfully!'
+```
+
+### Message Categories
+
+<CardGroup cols={2}>
+  <Card title="Errors" icon="triangle-exclamation">
+    Error messages for failed operations, permission issues, and invalid commands
+  </Card>
+  <Card title="Success" icon="circle-check">
+    Success messages for completed operations like authentication and configuration changes
+  </Card>
+  <Card title="System" icon="gear">
+    System messages for plugin lifecycle events and database operations
+  </Card>
+  <Card title="Discord" icon="bell">
+    Messages for Discord webhook notifications and alerts
+  </Card>
+</CardGroup>
+
+## Customizing Messages
+
+You can customize any message in the language files to match your server's tone or add custom information.
+
+### Editing Messages
+
+<Steps>
+  <Step title="Locate Language File">
+    Navigate to `plugins/SecureCommands/lang/` and open your language file (e.g., `en.yml`)
+  </Step>
+  
+  <Step title="Edit Message Text">
+    Modify the message text while preserving placeholders:
+    
+    ```yaml Before
+    errors:
+      not_authenticated: '%prefix%&cThis command is protected. Please use &a/sclogin <password>&c.'
+    ```
+    
+    ```yaml After
+    errors:
+      not_authenticated: '%prefix%&c⚠ Authentication required! Use &a/sclogin <password>&c to proceed.'
+    ```
+  </Step>
+  
+  <Step title="Reload the Plugin">
+    Apply changes by reloading:
+    
+    ```bash
+    /sc reload
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+Do not remove placeholders like `%prefix%`, `%player%`, or `%command%` from messages. The plugin replaces these with dynamic values at runtime.
+</Warning>
+
+## Color Codes
+
+SecureCommands uses Minecraft's **color code system** with the `&` prefix:
+
+| Code | Color | Code | Format |
+|------|-------|------|--------|
+| `&0` | Black | `&l` | **Bold** |
+| `&1` | Dark Blue | `&m` | ~~Strikethrough~~ |
+| `&2` | Dark Green | `&n` | Underline |
+| `&3` | Dark Aqua | `&o` | *Italic* |
+| `&4` | Dark Red | `&r` | Reset |
+| `&5` | Dark Purple | | |
+| `&6` | Gold | | |
+| `&7` | Gray | | |
+| `&8` | Dark Gray | | |
+| `&9` | Blue | | |
+| `&a` | Green | | |
+| `&b` | Aqua | | |
+| `&c` | Red | | |
+| `&d` | Light Purple | | |
+| `&e` | Yellow | | |
+| `&f` | White | | |
+
+### Example Color Usage
+
+```yaml
+prefix: '&b&l[SecureCommands]&r '
+success:
+  authenticated: '%prefix%&a&l✓&r &aYou are now authenticated!'
+errors:
+  invalid_code: '%prefix%&c&l✗&r &cIncorrect code.'
+```
+
+**Result**:
+- Prefix: **[SecureCommands]** in bold aqua
+- Success: **✓** in bold green + message in green
+- Error: **✗** in bold red + message in red
+
+## Placeholders
+
+Messages can include dynamic placeholders that are replaced at runtime:
+
+| Placeholder | Description | Example Usage |
+|-------------|-------------|---------------|
+| `%prefix%` | Plugin message prefix | `%prefix%&cError occurred` |
+| `%player%` | Player name | `%prefix%Welcome, %player%!` |
+| `%command%` | Executed command | `Blocked command: %command%` |
+| `%password%` | Attempted password | `Failed login with: %password%` |
+| `%version%` | Plugin version | `New version: %version%` |
+| `%error%` | Error message | `Failed: %error%` |
+
+### Placeholder Replacement
+
+**Implementation** (`MessagesManager.java:55-73`):
+
+```java
+public String getMessage(String path, String... replacements) {
+    String message = messagesConfig.getString(path, "Message not found: " + path);
+    
+    // Replace custom placeholders
+    for (int i = 0; i < replacements.length; i += 2) {
+        if (i + 1 < replacements.length) {
+            message = message.replace(replacements[i], replacements[i + 1]);
+        }
+    }
+    
+    // Replace prefix placeholder
+    if (message.contains("%prefix%")) {
+        String prefix = messagesConfig.getString("prefix", "&b[SecureCommands] &r");
+        message = message.replace("%prefix%", prefix);
+    }
+    
+    // Translate color codes
+    return ChatColor.translateAlternateColorCodes('&', message);
+}
+```
+
+## Creating Custom Language Files
+
+You can create your own language file for unsupported languages:
+
+<Steps>
+  <Step title="Copy Existing Language File">
+    Navigate to `plugins/SecureCommands/lang/` and copy an existing file:
+    
+    ```bash
+    cd plugins/SecureCommands/lang/
+    cp en.yml custom.yml
+    ```
+  </Step>
+  
+  <Step title="Translate All Messages">
+    Open `custom.yml` and translate every message to your target language:
+    
+    ```yaml custom.yml
+    prefix: '[SecureCommands] '
+    errors:
+      not_authenticated: 'Questo comando è protetto. Usa /sclogin <password>.'
+    ```
+  </Step>
+  
+  <Step title="Configure Language Code">
+    Edit `config.yml` to use your custom language:
+    
+    ```yaml config.yml
+    language: "custom"
+    ```
+  </Step>
+  
+  <Step title="Reload and Test">
+    Reload the plugin and test your custom messages:
+    
+    ```bash
+    /sc reload
+    ```
+  </Step>
+</Steps>
+
+<Info>
+If you create a language file for a new language, consider contributing it to the project on GitHub!
+</Info>
+
+## Fallback Behavior
+
+### Invalid Language Code
+
+If the specified language file doesn't exist, SecureCommands falls back to English:
+
+```java MessagesManager.java:41-45
+if (!messagesFile.exists()) {
+    plugin.getLogger().warning("Language file '" + langCode + ".yml' not found. Falling back to English.");
+    this.langCode = "en";
+    messagesFile = new File(langDir, "en.yml");
+}
+```
+
+### Missing Message Keys
+
+If a message key is missing from the language file, a fallback message is returned:
+
+```java MessagesManager.java:56
+String message = messagesConfig.getString(path, "Message not found: " + path);
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Keep Placeholders" icon="brackets-curly">
+    Never remove placeholders like `%prefix%` or `%player%` from messages—they are dynamically replaced at runtime.
+  </Card>
+  <Card title="Preserve Formatting" icon="palette">
+    Maintain color codes and formatting in your translations to ensure consistency with the original messages.
+  </Card>
+  <Card title="Test Translations" icon="vial">
+    After translating, test all commands and error scenarios to ensure messages display correctly.
+  </Card>
+  <Card title="Backup Before Editing" icon="floppy-disk">
+    Always backup language files before making changes, especially if you're adding custom messages.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<Accordion title="Messages are in English despite changing language">
+  Check the following:
+  
+  1. **Language file exists**:
+     ```bash
+     ls plugins/SecureCommands/lang/
+     # Should show: en.yml, es.yml, fr.yml, etc.
+     ```
+  
+  2. **Language code is correct** in `config.yml`:
+     ```yaml
+     language: "es"  # Must match a file in lang/ directory
+     ```
+  
+  3. **Plugin was reloaded** after changing language:
+     ```bash
+     /sc reload
+     ```
+  
+  4. **Check server logs** for fallback warnings:
+     ```
+     [SecureCommands] Language file 'xyz.yml' not found. Falling back to English.
+     ```
+</Accordion>
+
+<Accordion title="Color codes are not working">
+  Ensure you're using the `&` prefix for color codes, not `§`:
+  
+  ```yaml Correct
+  prefix: '&b[SecureCommands] &r'
+  ```
+  
+  ```yaml Incorrect
+  prefix: '§b[SecureCommands] §r'
+  ```
+  
+  Color code translation happens automatically via `ChatColor.translateAlternateColorCodes('&', message)`.
+</Accordion>
+
+<Accordion title="Custom messages are not showing">
+  If you edited a language file but messages haven't changed:
+  
+  1. **Reload the plugin**:
+     ```bash
+     /sc reload
+     ```
+  
+  2. **Check YAML syntax**: Invalid YAML will cause the file to fail loading. Use a YAML validator.
+  
+  3. **Verify message key**: Ensure you edited the correct key path (e.g., `errors.not_authenticated`).
+  
+  4. **Check server logs** for YAML parsing errors.
+</Accordion>
+
+<Accordion title="Placeholders are showing literally">
+  If you see `%player%` or `%prefix%` in chat instead of the actual value:
+  
+  - Ensure placeholders are spelled correctly (case-sensitive)
+  - Check that the message is being called with replacement values
+  - Verify the `MessagesManager.getMessage()` method is being used correctly
+  
+  Example:
+  ```java
+  plugin.getMessagesManager().getMessage("errors.invalid_code", "%player%", playerName);
+  ```
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Discord Notifications" icon="bell" href="/features/discord-notifications">
+    Customize Discord alert messages for different languages
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/languages">
+    Learn more about language configuration options
+  </Card>
+</CardGroup>

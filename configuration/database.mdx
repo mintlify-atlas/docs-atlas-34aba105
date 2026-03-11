@@ -1,0 +1,147 @@
+---
+title: Database Configuration
+description: Configure MySQL database connection settings for SecureCommands
+---
+
+SecureCommands uses MySQL to store player security codes and authentication data. This page covers all database configuration options.
+
+## Configuration
+
+The database settings are located in the `config.yml` file under the `database` section:
+
+```yaml
+database:
+  host: "localhost"
+  port: 3306
+  name: "secure_commands"
+  user: "root"
+  password: "password"
+```
+
+## Configuration Parameters
+
+<ParamField path="database.host" type="string" default="localhost">
+  The hostname or IP address of your MySQL server.
+  
+  **Examples:**
+  - `localhost` - For local development
+  - `127.0.0.1` - Alternative local address
+  - `mysql.example.com` - Remote database server
+</ParamField>
+
+<ParamField path="database.port" type="integer" default="3306">
+  The port number your MySQL server is listening on.
+  
+  <Note>
+    The default MySQL port is 3306. Only change this if your MySQL server uses a custom port.
+  </Note>
+</ParamField>
+
+<ParamField path="database.name" type="string" default="secure_commands">
+  The name of the database to use for SecureCommands.
+  
+  <Warning>
+    Make sure this database exists before starting the plugin. The plugin will create the necessary tables automatically, but it will not create the database itself.
+  </Warning>
+</ParamField>
+
+<ParamField path="database.user" type="string" default="root">
+  The MySQL username for authentication.
+  
+  <Info>
+    For security reasons, it's recommended to create a dedicated MySQL user for SecureCommands rather than using the root account.
+  </Info>
+</ParamField>
+
+<ParamField path="database.password" type="string" default="password">
+  The password for the MySQL user.
+  
+  <Warning>
+    Always use a strong password and never use the default "password" value in production environments.
+  </Warning>
+</ParamField>
+
+## Database Tables
+
+SecureCommands automatically creates the following table structure:
+
+### `player_data` Table
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `player_name` | VARCHAR(16) | Primary key. The player's username (lowercase) |
+| `code` | VARCHAR(60) | BCrypt hashed security code |
+| `authenticated` | BOOLEAN | Whether the player is currently authenticated |
+| `is_premium` | BOOLEAN | Whether the player has a premium Minecraft account |
+
+## Connection Details
+
+The plugin uses the following JDBC connection string:
+
+```
+jdbc:mysql://{host}:{port}/{name}?useSSL=false&autoReconnect=true
+```
+
+<Info>
+  The connection includes `autoReconnect=true` to automatically reconnect if the connection is lost.
+</Info>
+
+## Setup Guide
+
+### 1. Create the Database
+
+Connect to your MySQL server and create the database:
+
+```sql
+CREATE DATABASE secure_commands;
+```
+
+### 2. Create a Dedicated User (Recommended)
+
+```sql
+CREATE USER 'securecommands'@'localhost' IDENTIFIED BY 'your_strong_password';
+GRANT ALL PRIVILEGES ON secure_commands.* TO 'securecommands'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+### 3. Update config.yml
+
+```yaml
+database:
+  host: "localhost"
+  port: 3306
+  name: "secure_commands"
+  user: "securecommands"
+  password: "your_strong_password"
+```
+
+### 4. Restart the Server
+
+Restart your Minecraft server or reload the plugin to apply the changes.
+
+## Troubleshooting
+
+### Connection Failed
+
+If the plugin cannot connect to the database, check the following:
+
+1. **Verify MySQL is running**: Make sure your MySQL server is active
+2. **Check credentials**: Ensure the username and password are correct
+3. **Database exists**: Confirm the database has been created
+4. **User permissions**: Verify the user has appropriate privileges
+5. **Network access**: If using a remote database, ensure the server can reach it
+
+<Warning>
+  Check the server console logs for detailed error messages if connection fails.
+</Warning>
+
+### SSL Warnings
+
+The plugin uses `useSSL=false` in the connection string. If you want to enable SSL:
+
+1. Configure your MySQL server for SSL
+2. The connection string would need to be modified in the plugin code
+
+<Note>
+  For most Minecraft servers running on the same machine as the database, SSL is not necessary.
+</Note>

@@ -1,0 +1,224 @@
+---
+title: Commands Configuration
+description: Configure which commands require security code authentication
+---
+
+SecureCommands allows you to protect specific commands by requiring players to authenticate with their security code before executing them.
+
+## Configuration
+
+The blocked commands are defined in the `config.yml` file:
+
+```yaml
+blocked-commands:
+  - "/op"
+  - "/ban"
+  - "/kick"
+```
+
+## Configuration Parameter
+
+<ParamField path="blocked-commands" type="array" default='["/op", "/ban", "/kick"]'>
+  A list of commands that require authentication before execution.
+  
+  **Key Points:**
+  - Commands should include the forward slash (`/`)
+  - Commands are case-insensitive
+  - Players must be authenticated to execute these commands
+  - Whitelisted players bypass this protection
+</ParamField>
+
+## How It Works
+
+When a command is added to the `blocked-commands` list:
+
+1. Non-authenticated players attempting to use the command will be blocked
+2. The player will be prompted to authenticate using `/sclogin <code>`
+3. Once authenticated, the player can execute the command
+4. Whitelisted players can always execute blocked commands without authentication
+
+<Info>
+  Security codes are stored using BCrypt hashing for maximum security.
+</Info>
+
+## Common Protected Commands
+
+Here are some commonly protected commands:
+
+```yaml
+blocked-commands:
+  # Server management
+  - "/op"
+  - "/deop"
+  - "/stop"
+  - "/reload"
+  
+  # Player management
+  - "/ban"
+  - "/kick"
+  - "/pardon"
+  - "/whitelist"
+  
+  # World management
+  - "/save-all"
+  - "/save-on"
+  - "/save-off"
+  
+  # Plugin management
+  - "/pl"
+  - "/plugins"
+  - "/plugin"
+```
+
+## Managing Commands In-Game
+
+You can manage the blocked commands list without editing the config file:
+
+### Add a Command
+
+```
+/sc addcommand <command>
+```
+
+**Example:**
+```
+/sc addcommand /gamemode
+```
+
+<Note>
+  Commands are automatically converted to lowercase when added.
+</Note>
+
+### Remove a Command
+
+```
+/sc removecommand <command>
+```
+
+**Example:**
+```
+/sc removecommand /gamemode
+```
+
+### View Current List
+
+You can view the current list of blocked commands in the `config.yml` file or check the plugin's configuration.
+
+## Command Matching
+
+### Exact Matching
+
+The plugin uses exact command matching. For example:
+
+- If `/op` is blocked, it will only block `/op`
+- `/operator` or `/op-alt` would NOT be blocked
+
+<Warning>
+  Make sure to add all variations of a command if they exist. For example, both `/pl` and `/plugins` if both are aliases.
+</Warning>
+
+### Subcommands
+
+To block specific subcommands, include them in the blocked command:
+
+```yaml
+blocked-commands:
+  - "/gamemode creative"
+  - "/gamemode survival"
+```
+
+## Permissions
+
+<ParamField path="securecommands.admin" type="permission">
+  Required to add and remove commands from the blocked list.
+  
+  **Commands:**
+  - `/sc addcommand`
+  - `/sc removecommand`
+</ParamField>
+
+## Best Practices
+
+### 1. Start with Essential Commands
+
+Begin by protecting the most critical commands:
+
+```yaml
+blocked-commands:
+  - "/op"
+  - "/deop"
+  - "/ban"
+  - "/pardon"
+```
+
+### 2. Test Thoroughly
+
+After adding commands:
+1. Test with a non-authenticated account
+2. Verify the command is blocked
+3. Test authentication works correctly
+4. Confirm whitelisted players can bypass
+
+### 3. Document Your List
+
+Keep track of why each command is blocked:
+
+```yaml
+blocked-commands:
+  # Critical server commands - prevent unauthorized server control
+  - "/op"
+  - "/stop"
+  
+  # Moderation commands - ensure only authorized staff can moderate
+  - "/ban"
+  - "/kick"
+```
+
+### 4. Consider Plugin Commands
+
+Protect sensitive plugin commands too:
+
+```yaml
+blocked-commands:
+  - "/essentials reload"
+  - "/luckperms"
+  - "/worldedit"
+```
+
+## Reloading Changes
+
+After editing `config.yml`, reload the plugin:
+
+```
+/sc reload
+```
+
+<Info>
+  When using in-game commands (`/sc addcommand` or `/sc removecommand`), changes are saved automatically and no reload is needed.
+</Info>
+
+## Troubleshooting
+
+### Command Still Works Without Authentication
+
+**Check:**
+1. Command format matches exactly (including `/`)
+2. Plugin was reloaded after config change
+3. Player is not on the whitelist
+4. Player doesn't have bypass permissions
+
+### Command Not Blocking Variations
+
+<Warning>
+  Remember that command aliases are separate. You must block each alias individually:
+  ```yaml
+  blocked-commands:
+    - "/pl"
+    - "/plugins"
+    - "/?"  # Some servers use this as an alias
+  ```
+</Warning>
+
+### Discord Notifications
+
+When a player attempts to use a blocked command without authentication, a security alert can be sent to Discord if configured. See [Discord Configuration](/configuration/discord) for details.

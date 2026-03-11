@@ -1,0 +1,404 @@
+---
+title: Language Configuration
+description: Configure the language for SecureCommands messages
+---
+
+SecureCommands supports multiple languages for all plugin messages. You can easily switch between supported languages or customize messages to fit your server's needs.
+
+## Configuration
+
+The language setting is configured in the `config.yml` file:
+
+```yaml
+# Plugin language setting
+# Available languages: en, es, fr, de, pl, it, br, ru
+language: "en"
+```
+
+## Configuration Parameter
+
+<ParamField path="language" type="string" default="en">
+  The language code for plugin messages.
+  
+  **Supported values:**
+  - `en` - English
+  - `es` - Spanish (Español)
+  - `fr` - French (Français)
+  - `de` - German (Deutsch)
+  - `pl` - Polish (Polski)
+  - `it` - Italian (Italiano)
+  - `br` - Brazilian Portuguese (Português Brasileiro)
+  - `ru` - Russian (Русский)
+  
+  <Info>
+    If an invalid language code is provided, the plugin will automatically fall back to English.
+  </Info>
+</ParamField>
+
+## Supported Languages
+
+| Code | Language | Native Name |
+|------|----------|-------------|
+| `en` | English | English |
+| `es` | Spanish | Español |
+| `fr` | French | Français |
+| `de` | German | Deutsch |
+| `pl` | Polish | Polski |
+| `it` | Italian | Italiano |
+| `br` | Brazilian Portuguese | Português Brasileiro |
+| `ru` | Russian | Русский |
+
+## How It Works
+
+When SecureCommands loads:
+
+1. It reads the `language` setting from `config.yml`
+2. It loads the corresponding language file from `plugins/SecureCommands/lang/`
+3. All plugin messages use the selected language
+4. If the language file is missing, it falls back to English
+
+<Note>
+  Language files are automatically extracted when the plugin first loads. You don't need to manually create them.
+</Note>
+
+## Changing the Language
+
+### 1. Edit config.yml
+
+Change the language code to your preferred language:
+
+```yaml
+language: "es"  # Change to Spanish
+```
+
+### 2. Reload the Plugin
+
+Apply the changes:
+
+```
+/sc reload
+```
+
+### 3. Verify
+
+Test a command to see the messages in the new language:
+
+```
+/sclogin
+```
+
+## Language Files
+
+Language files are stored in:
+
+```
+plugins/SecureCommands/lang/
+├── en.yml
+├── es.yml
+├── fr.yml
+├── de.yml
+├── pl.yml
+├── it.yml
+├── br.yml
+└── ru.yml
+```
+
+### Structure
+
+Each language file contains key-value pairs:
+
+```yaml
+prefix: "&b[SecureCommands] &r"
+
+commands:
+  setcode:
+    success: "&aYour security code has been set successfully!"
+    already_set: "&cYou already have a security code set!"
+  
+  login:
+    success: "&aYou have been authenticated!"
+    incorrect: "&cIncorrect security code!"
+
+# ... more messages
+```
+
+## Customizing Messages
+
+You can customize messages while keeping the selected language:
+
+### 1. Locate the Language File
+
+Find the file for your language in `plugins/SecureCommands/lang/`.
+
+For example, for English: `plugins/SecureCommands/lang/en.yml`
+
+### 2. Edit the Messages
+
+Open the file and modify the messages:
+
+```yaml
+prefix: "&6[Security] &r"
+
+commands:
+  login:
+    success: "&2✓ Access granted!"
+    incorrect: "&4✗ Access denied!"
+```
+
+### 3. Reload
+
+Reload the plugin to apply changes:
+
+```
+/sc reload
+```
+
+<Warning>
+  When the plugin updates, language files may be overwritten. Back up your customizations before updating.
+</Warning>
+
+## Color Codes
+
+Messages support Minecraft color codes using `&`:
+
+| Code | Color |
+|------|-------|
+| `&0` | Black |
+| `&1` | Dark Blue |
+| `&2` | Dark Green |
+| `&3` | Dark Aqua |
+| `&4` | Dark Red |
+| `&5` | Dark Purple |
+| `&6` | Gold |
+| `&7` | Gray |
+| `&8` | Dark Gray |
+| `&9` | Blue |
+| `&a` | Green |
+| `&b` | Aqua |
+| `&c` | Red |
+| `&d` | Light Purple |
+| `&e` | Yellow |
+| `&f` | White |
+
+### Formatting Codes
+
+| Code | Effect |
+|------|--------|
+| `&l` | Bold |
+| `&m` | Strikethrough |
+| `&n` | Underline |
+| `&o` | Italic |
+| `&r` | Reset |
+
+**Example:**
+```yaml
+prefix: "&b&l[SecureCommands] &r"
+message: "&a&lSUCCESS: &r&7Your code has been set."
+```
+
+## Placeholders
+
+Some messages include placeholders that are replaced with dynamic values:
+
+| Placeholder | Replaced With |
+|-------------|---------------|
+| `%prefix%` | The plugin prefix |
+| `%player%` | Player name |
+| `%command%` | Command name |
+| `%code%` | Security code |
+| `%error%` | Error message |
+
+**Example:**
+```yaml
+player_added: "%prefix%&aPlayer &e%player% &ahas been added to the whitelist."
+```
+
+<Info>
+  Don't remove placeholders from messages as they provide important dynamic information.
+</Info>
+
+## Fallback Behavior
+
+If a language file is missing or corrupted:
+
+1. The plugin logs a warning to the console
+2. It automatically falls back to English (`en.yml`)
+3. If English is also missing, it uses built-in default messages
+
+**Console Warning:**
+```
+[SecureCommands] WARNING: Language file 'de.yml' not found. Falling back to English.
+```
+
+## Creating Custom Language Files
+
+To create a custom language or dialect:
+
+### 1. Copy an Existing File
+
+```bash
+cp plugins/SecureCommands/lang/en.yml plugins/SecureCommands/lang/custom.yml
+```
+
+### 2. Translate the Messages
+
+Edit `custom.yml` with your translations:
+
+```yaml
+prefix: "[YourServer] "
+commands:
+  login:
+    success: "You're in!"
+    incorrect: "Wrong code, try again!"
+```
+
+### 3. Update config.yml
+
+```yaml
+language: "custom"
+```
+
+### 4. Reload
+
+```
+/sc reload
+```
+
+<Note>
+  Custom language files will not be overwritten by plugin updates.
+</Note>
+
+## Best Practices
+
+### 1. Keep Consistent Formatting
+
+Maintain consistent color schemes across messages:
+
+```yaml
+prefix: "&b[SecureCommands] &r"
+successful_action: "&aAction completed successfully!"
+error_message: "&cAn error occurred!"
+info_message: "&7Information: ..."
+```
+
+### 2. Test After Changes
+
+Always test your messages in-game:
+
+- Check for typos
+- Verify color codes work
+- Ensure placeholders are replaced correctly
+
+### 3. Backup Customizations
+
+Before updating the plugin:
+
+```bash
+cp plugins/SecureCommands/lang/en.yml plugins/SecureCommands/lang/en.yml.backup
+```
+
+### 4. Document Changes
+
+Keep a comment in the file with your changes:
+
+```yaml
+# Custom modifications by ServerAdmin
+# Date: 2024-01-15
+# Changes: Updated prefix and success messages
+
+prefix: "&6[Security] &r"
+```
+
+## Multi-Language Servers
+
+<Info>
+  SecureCommands uses one language for all players. If you need per-player languages, consider using a translation plugin alongside SecureCommands.
+</Info>
+
+For servers with multiple languages:
+
+1. Choose the primary language most players speak
+2. Announce the language setting in your server rules
+3. Consider keeping messages concise and clear
+
+## Troubleshooting
+
+### Messages Not Changing
+
+**Check:**
+1. Language code is correct in `config.yml`
+2. Language file exists in `plugins/SecureCommands/lang/`
+3. Plugin was reloaded after changes: `/sc reload`
+4. No YAML syntax errors in the language file
+
+### Showing Key Names Instead of Messages
+
+If you see messages like `commands.login.success`:
+
+1. The language file is missing or corrupted
+2. The message key doesn't exist in the file
+3. YAML formatting is incorrect
+
+**Solution:** Delete the language file and let the plugin regenerate it on next restart.
+
+### Color Codes Not Working
+
+<Warning>
+  Make sure color codes use `&` (ampersand), not `§` (section sign). The plugin converts `&` to `§` automatically.
+</Warning>
+
+```yaml
+# Correct
+message: "&aGreen text &cred text"
+
+# Incorrect
+message: "§aGreen text §cred text"
+```
+
+## Reloading Language Changes
+
+After editing language files:
+
+```
+/sc reload
+```
+
+This will:
+- Reload the `config.yml` file
+- Reload the current language file
+- Apply all changes immediately
+
+<Info>
+  Players don't need to reconnect for language changes to take effect.
+</Info>
+
+## Example Configurations
+
+### English Server
+
+```yaml
+language: "en"
+```
+
+### Spanish Server
+
+```yaml
+language: "es"
+```
+
+### French Server with Custom Prefix
+
+```yaml
+language: "fr"
+```
+
+Then edit `plugins/SecureCommands/lang/fr.yml`:
+```yaml
+prefix: "&6[Sécurité] &r"
+```
+
+### Russian Server
+
+```yaml
+language: "ru"
+```

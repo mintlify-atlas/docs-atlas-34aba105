@@ -1,0 +1,280 @@
+---
+title: Installation
+description: Set up SecureCommands on your Minecraft server
+---
+
+## Requirements
+
+Before installing SecureCommands, ensure your server meets these requirements:
+
+<CardGroup cols={2}>
+  <Card title="Server Software" icon="server">
+    Spigot or Paper 1.18.2 or higher
+  </Card>
+  
+  <Card title="Java Version" icon="coffee">
+    Java 17 or higher
+  </Card>
+  
+  <Card title="Database" icon="database">
+    MySQL 5.7+ or MariaDB 10.2+
+  </Card>
+  
+  <Card title="API Version" icon="code">
+    Minecraft API 1.19+
+  </Card>
+</CardGroup>
+
+<Warning>
+  SecureCommands requires a MySQL database to store secure codes and player data. Make sure you have database credentials ready before installation.
+</Warning>
+
+## Download
+
+Download the latest version of SecureCommands from one of these sources:
+
+- **SpigotMC**: [Resource #128091](https://www.spigotmc.org/resources/128091/)
+- **GitHub Releases**: Check the official repository for releases
+
+<Note>
+  Always download plugins from official sources to avoid malicious modifications.
+</Note>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Stop Your Server">
+    Before installing any plugin, stop your Minecraft server to prevent conflicts:
+    
+    ```bash
+    # Run in your server console
+    stop
+    ```
+  </Step>
+  
+  <Step title="Upload the Plugin">
+    Place the `SecureCommands.jar` file in your server's `plugins` directory:
+    
+    ```bash
+    # Example path
+    /your-server/plugins/SecureCommands.jar
+    ```
+  </Step>
+  
+  <Step title="Start the Server">
+    Start your server to generate the default configuration files:
+    
+    ```bash
+    # The plugin will create its config files on first start
+    java -jar server.jar
+    ```
+    
+    You should see a message in the console:
+    ```
+    [SecureCommands] SecureCommands enabled!
+    [SecureCommands] Developed by Pablohs08
+    ```
+  </Step>
+  
+  <Step title="Stop the Server Again">
+    Stop the server to configure the database connection:
+    
+    ```bash
+    stop
+    ```
+  </Step>
+</Steps>
+
+## Database Configuration
+
+SecureCommands stores all player data and secure codes in a MySQL database. Configure your database connection before using the plugin.
+
+<Steps>
+  <Step title="Create a Database">
+    Create a new MySQL database for SecureCommands:
+    
+    ```sql
+    CREATE DATABASE secure_commands;
+    ```
+    
+    <Note>
+      You can use an existing database, but we recommend creating a dedicated database for better organization.
+    </Note>
+  </Step>
+  
+  <Step title="Create a Database User (Optional)">
+    For better security, create a dedicated database user:
+    
+    ```sql
+    CREATE USER 'securecommands'@'localhost' IDENTIFIED BY 'your_secure_password';
+    GRANT ALL PRIVILEGES ON secure_commands.* TO 'securecommands'@'localhost';
+    FLUSH PRIVILEGES;
+    ```
+  </Step>
+  
+  <Step title="Configure Database in config.yml">
+    Open `plugins/SecureCommands/config.yml` and update the database settings:
+    
+    ```yaml
+    # Database connection
+    database:
+      host: "localhost"
+      port: 3306
+      name: "secure_commands"
+      user: "securecommands"
+      password: "your_secure_password"
+    ```
+    
+    <Warning>
+      Never use the root database user in production. Always create a dedicated user with limited privileges.
+    </Warning>
+  </Step>
+</Steps>
+
+## Initial Configuration
+
+Configure SecureCommands to match your server's needs.
+
+### Language Settings
+
+SecureCommands supports 8 languages. Set your preferred language in `config.yml`:
+
+```yaml
+# Plugin language setting
+# Available languages: en, es, fr, de, pl, it, br, ru
+language: "en"
+```
+
+### Whitelist Configuration
+
+Add players who should be able to set secure codes and use protected commands:
+
+```yaml
+# Whitelisted players
+whitelist:
+  - "Player1"
+  - "Player2"
+  - "YourUsername"
+```
+
+<Note>
+  Player names are case-insensitive. The plugin will automatically convert them to lowercase for comparison.
+</Note>
+
+### Protected Commands
+
+Define which commands require authentication:
+
+```yaml
+# Commands to protect
+blocked-commands:
+  - "/op"
+  - "/ban"
+  - "/kick"
+  - "/stop"
+  - "/deop"
+  - "/whitelist"
+```
+
+<Warning>
+  Be careful when protecting commands like `/stop`. Make sure you have console access or you might lock yourself out!
+</Warning>
+
+### Discord Notifications (Optional)
+
+Enable Discord webhook notifications for security events and updates:
+
+```yaml
+# Discord Notifications
+discord:
+  # Enable or disable all Discord notifications
+  enabled: true
+  
+  # Webhook to notify about plugin updates
+  update-webhook-url: "https://discord.com/api/webhooks/..."
+  
+  # Webhook to notify about security events (blocked commands, failed logins)
+  security-webhook-url: "https://discord.com/api/webhooks/..."
+```
+
+<Steps>
+  <Step title="Create Discord Webhooks">
+    In your Discord server:
+    1. Go to Server Settings → Integrations → Webhooks
+    2. Click "New Webhook"
+    3. Configure the webhook name and channel
+    4. Copy the webhook URL
+  </Step>
+  
+  <Step title="Add Webhooks to Config">
+    Paste your webhook URLs in the config file and set `enabled: true`.
+  </Step>
+</Steps>
+
+## Final Setup
+
+<Steps>
+  <Step title="Start Your Server">
+    Start the server with your new configuration:
+    
+    ```bash
+    java -jar server.jar
+    ```
+  </Step>
+  
+  <Step title="Verify Database Connection">
+    Check the console for the database connection message:
+    
+    ```
+    [SecureCommands] Connected to database successfully!
+    [SecureCommands] SecureCommands enabled!
+    ```
+    
+    <Warning>
+      If the database connection fails, the plugin will automatically shut down the server. Double-check your database credentials and ensure MySQL is running.
+    </Warning>
+  </Step>
+  
+  <Step title="Test the Plugin">
+    Join your server and verify the plugin is working:
+    
+    ```
+    /sc
+    ```
+    
+    You should see the help message or a permission error depending on your permissions.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Database Connection Failed
+
+ If you see `Database connection failed! Shutting down the server...`:
+
+1. Verify MySQL is running: `systemctl status mysql`
+2. Check database credentials in `config.yml`
+3. Ensure the database exists: `SHOW DATABASES;`
+4. Verify the user has proper permissions: `SHOW GRANTS FOR 'securecommands'@'localhost';`
+
+### Plugin Not Loading
+
+If the plugin doesn't load:
+
+1. Check Java version: `java -version` (must be Java 17+)
+2. Verify server version (must be 1.18.2+)
+3. Check console for error messages
+4. Ensure the JAR file is in the `plugins` directory
+
+### Commands Not Being Blocked
+
+If protected commands aren't being blocked:
+
+1. Verify commands are listed in `blocked-commands` in `config.yml`
+2. Commands must start with `/` in the config
+3. Reload the plugin: `/sc reload`
+4. Check if the player is already authenticated
+
+## What's Next?
+
+Now that SecureCommands is installed, continue to the [Quick Start](/quickstart) guide to set up your first protected command and authenticate users.

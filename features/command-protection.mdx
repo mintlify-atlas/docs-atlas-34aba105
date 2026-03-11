@@ -1,0 +1,300 @@
+---
+title: "Command Protection"
+description: "Protect critical server commands with password authentication and BCrypt encryption"
+icon: "shield"
+---
+
+## Overview
+
+SecureCommands protects your server by intercepting commands before they execute and requiring authentication for blocked commands. The system uses BCrypt encryption with a cost factor of 12 to securely hash and store player passwords.
+
+## How Command Blocking Works
+
+The command protection system operates through the `CommandBlocker` listener, which intercepts all player commands using the `PlayerCommandPreprocessEvent`.
+
+### Authentication Flow
+
+<Steps>
+  <Step title="Command Interception">
+    When a player executes a command, the `CommandBlocker` listener intercepts it before execution
+  </Step>
+  <Step title="Authentication Check">
+    The system checks if the player's UUID is in the authenticated players set
+  </Step>
+  <Step title="Command Matching">
+    If not authenticated, the command is compared against the blocked commands list
+  </Step>
+  <Step title="Block or Allow">
+    - If matched and not authenticated: command is cancelled, player is notified, Discord alert sent
+    - If matched and authenticated: command executes normally
+    - If not in blocked list: command executes normally
+  </Step>
+</Steps>
+
+### Implementation Details
+
+The `CommandBlocker` class maintains a `HashSet<UUID>` of authenticated players:
+
+```java CommandBlocker.java:20
+private final Set<UUID> authenticatedPlayers = new HashSet<>();
+```
+
+**Command interception logic** (`CommandBlocker.java:85-124`):
+
+```java
+@EventHandler
+public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent event) {
+    Player player = event.getPlayer();
+    String msg = event.getMessage().toLowerCase();
+    
+    // Allow plugin commands to always execute
+    if (msg.startsWith("/sclogin") || msg.startsWith("/sc")) {
+        return;
+    }
+    
+    boolean isAuthenticated = authenticatedPlayers.contains(player.getUniqueId());
+    
+    if (!isAuthenticated) {
+        for (String blocked : plugin.getConfigManager().getBlockedCommands()) {
+            if (msg.startsWith(blocked.toLowerCase())) {
+                event.setCancelled(true);
+                player.sendMessage("This command is protected. Please use /sclogin");
+                
+                // Send Discord security alert
+                plugin.getDiscordNotifier().sendSecurityAlert(
+                    "🚨 Command Blocked 🚨",
+                    "Player " + player.getName() + " tried: " + event.getMessage()
+                );
+                
+                return;
+            }
+        }
+    }
+}
+```
+
+## BCrypt Encryption
+
+SecureCommands uses the **jBCrypt library** (v0.4) to hash passwords with a cost factor of 12, providing strong protection against brute-force attacks.
+
+### Password Storage
+
+Passwords are **never stored in plain text**. When a player sets a secure code:
+
+1. The password is hashed using `BCrypt.hashpw(password, BCrypt.gensalt(12))`
+2. Only the hash is stored in the database
+3. The original password is discarded
+
+### Password Verification
+
+When a player authenticates with `/sclogin <password>`:
+
+1. The system retrieves the stored hash from the database
+2. Compares using `BCrypt.checkpw(inputPassword, storedHash)`
+3. Authentication succeeds only if the hashes match
+
+<Info>
+BCrypt is a password-hashing function designed to be computationally expensive, making brute-force attacks impractical. The cost factor of 12 means 2^12 = 4,096 rounds of hashing.
+</Info>
+
+## Session Management
+
+### Authentication State
+
+Authentication is **session-based** and resets when:
+
+- Player disconnects from the server
+- Player rejoins the server
+- Server restarts
+- Plugin is reloaded
+
+**Reset on join** (`CommandBlocker.java:128-131`):
+
+```java
+@EventHandler
+public void onPlayerJoin(PlayerJoinEvent event) {
+    Player player = event.getPlayer();
+    authenticatedPlayers.remove(player.getUniqueId());
+}
+```
+
+**Reset on quit** (`SecureCommands.java:244-252`):
+
+```java
+@EventHandler
+public void onPlayerQuit(PlayerQuitEvent event) {
+    Player player = event.getPlayer();
+    playerDataManager.savePlayerData(player.getUniqueId(), player.getName());
+    commandBlocker.deauthenticatePlayer(player.getUniqueId());
+}
+```
+
+### Pending Authentication
+
+During premium player verification, players are placed in a **pending authentication** state:
+
+```java
+private Set<UUID> pendingAuthentication = new HashSet<>();
+```
+
+While pending, **all commands are blocked** with a wait message:
+
+```java CommandBlocker.java:96-100
+if (plugin.getPendingAuthentication().contains(player.getUniqueId())) {
+    event.setCancelled(true);
+    player.sendMessage("Please wait, checking your authentication status...");
+    return;
+}
+```
+
+## Command Matching
+
+### Case-Insensitive Matching
+
+All commands are converted to lowercase before comparison:
+
+```java
+String msg = event.getMessage().toLowerCase();
+if (msg.startsWith(blocked.toLowerCase())) {
+    // Block the command
+}
+```
+
+### Prefix Matching
+
+Commands are matched by **prefix**, not exact match:
+
+- If `/op` is blocked, `/op PlayerName` and `/operator` are both blocked
+- If `/ban` is blocked, `/ban PlayerName` and `/banlist` are both blocked
+
+<Warning>
+Use specific command prefixes to avoid unintended blocking. For example, blocking `/tp` will also block `/tpa`, `/tphere`, and `/tpaccept`.
+</Warning>
+
+### Plugin Command Exceptions
+
+SecureCommands and authentication commands are **always allowed**:
+
+- `/sclogin` - Required for authentication
+- `/sc` - Required for administration
+
+## Security Features
+
+### Failed Login Alerts
+
+When a player enters an incorrect password, the system:
+
+1. Denies authentication
+2. Sends error message to player
+3. **Sends Discord alert** with player name and attempted password
+4. Logs the attempt to console
+
+```java LoginCommandExecutor.java:45-56
+if (plugin.getDatabaseManager().isSecureCodeCorrect(playerName, password)) {
+    plugin.getCommandBlocker().authenticatePlayer(player.getUniqueId());
+    player.sendMessage("You are now authenticated!");
+} else {
+    player.sendMessage("Incorrect code.");
+    
+    // Discord security alert
+    String alertTitle = "🚫 Security Alert 🚫";
+    String alertMessage = "Player " + playerName + " tried incorrect code: " + password;
+    plugin.getDiscordNotifier().sendSecurityAlert(alertTitle, alertMessage);
+}
+```
+
+### Blocked Command Alerts
+
+When an unauthenticated player attempts a protected command:
+
+1. Command is cancelled
+2. Player receives "not authenticated" message
+3. **Discord alert sent** with player name and blocked command
+4. Warning logged to console
+
+```java CommandBlocker.java:111-119
+event.setCancelled(true);
+player.sendMessage("This command is protected. Please use /sclogin <password>.");
+plugin.getLogger().warning("Blocked command from " + player.getName() + 
+    ": '" + event.getMessage() + "' (Reason: Not authenticated).");
+
+String blockedTitle = "🚨 Command Blocked 🚨";
+String blockedMessage = "Player " + player.getName() + 
+    " tried: " + event.getMessage();
+plugin.getDiscordNotifier().sendSecurityAlert(blockedTitle, blockedMessage);
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Choose Strong Passwords" icon="key">
+    Require passwords with at least 8 characters, mixing letters, numbers, and symbols
+  </Card>
+  <Card title="Monitor Discord Alerts" icon="bell">
+    Set up Discord webhooks to track failed logins and blocked commands in real-time
+  </Card>
+  <Card title="Review Logs Regularly" icon="file-lines">
+    Check server logs for suspicious authentication patterns or repeated blocked commands
+  </Card>
+  <Card title="Use Specific Prefixes" icon="list">
+    Block specific commands like `/op` instead of broad prefixes like `/o` to avoid false positives
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<Accordion title="Commands are blocked even after authentication">
+  Check if the player is still authenticated:
+  
+  ```bash
+  # Check server logs for authentication status
+  [SecureCommands] Player authenticated successfully
+  ```
+  
+  Players must re-authenticate after:
+  - Disconnecting and rejoining
+  - Server restarts
+  - Plugin reloads
+</Accordion>
+
+<Accordion title="Plugin commands are being blocked">
+  This should never happen. `/sclogin` and `/sc` commands always bypass the blocking system. If this occurs, check for:
+  
+  - Conflicting plugins that override command handling
+  - Incorrect permissions setup
+  - Modified source code
+</Accordion>
+
+<Accordion title="Too many commands are being blocked">
+  Review your `blocked-commands` list in `config.yml`. Commands are matched by prefix, so blocking `/tp` will also block `/tpa`, `/tphere`, etc.
+  
+  Use more specific prefixes:
+  
+  ```yaml Good configuration
+  blocked-commands:
+    - "/op"
+    - "/deop"
+    - "/ban"
+    - "/pardon"
+  ```
+  
+  Instead of:
+  
+  ```yaml Too broad
+  blocked-commands:
+    - "/o"
+    - "/b"
+    - "/p"
+  ```
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Premium Players" icon="crown" href="/features/premium-players">
+    Learn about automatic authentication for premium accounts
+  </Card>
+  <Card title="Discord Notifications" icon="bell" href="/features/discord-notifications">
+    Set up real-time security alerts via Discord webhooks
+  </Card>
+</CardGroup>

@@ -1,0 +1,764 @@
+---
+title: 'Developer API'
+description: 'Public API reference for SecureCommands plugin developers'
+icon: 'code'
+---
+
+## Overview
+
+SecureCommands provides a public API for developers who want to integrate with the plugin or extend its functionality. This guide covers all available public methods and how to use them.
+
+## Getting Started
+
+### Add SecureCommands as a Dependency
+
+**Maven:**
+```xml
+<dependency>
+    <groupId>org.pablito</groupId>
+    <artifactId>SecureCommands</artifactId>
+    <version>2.3</version>
+    <scope>provided</scope>
+</dependency>
+```
+
+**Gradle:**
+```gradle
+compileOnly 'org.pablito:SecureCommands:2.3'
+```
+
+### Declare Dependency in plugin.yml
+
+```yaml
+name: YourPlugin
+version: 1.0
+main: com.example.YourPlugin
+depend: [SecureCommands]
+# or use softdepend if optional
+softdepend: [SecureCommands]
+```
+
+## Core API Methods
+
+### Getting the Plugin Instance
+
+The main entry point for accessing SecureCommands functionality.
+
+```java
+import org.pablito.secureCommands.SecureCommands;
+
+public class YourPlugin extends JavaPlugin {
+    private SecureCommands secureCommands;
+    
+    @Override
+    public void onEnable() {
+        // Get the SecureCommands instance
+        secureCommands = SecureCommands.getInstance();
+        
+        if (secureCommands == null) {
+            getLogger().warning("SecureCommands not found!");
+            return;
+        }
+        
+        getLogger().info("Successfully hooked into SecureCommands!");
+    }
+}
+```
+
+**Method Signature:**
+```java
+public static SecureCommands getInstance()
+```
+
+**Returns:** The active `SecureCommands` instance, or `null` if the plugin is not loaded.
+
+**Location:** `SecureCommands.java:133-135`
+
+---
+
+### DatabaseManager
+
+Access database operations for player authentication and secure codes.
+
+#### Get DatabaseManager Instance
+
+```java
+import org.pablito.secureCommands.managers.DatabaseManager;
+
+DatabaseManager databaseManager = SecureCommands.getInstance().getDatabaseManager();
+```
+
+**Method Signature:**
+```java
+public DatabaseManager getDatabaseManager()
+```
+
+**Returns:** The `DatabaseManager` instance for database operations.
+
+**Location:** `SecureCommands.java:137-139`
+
+#### Check if Secure Code is Set
+
+Verify if a player has already set their secure code.
+
+```java
+boolean hasCode = databaseManager.isSecureCodeSet("Steve");
+if (hasCode) {
+    player.sendMessage("You already have a secure code set!");
+}
+```
+
+**Method Signature:**
+```java
+public boolean isSecureCodeSet(String player)
+```
+
+**Parameters:**
+- `player` - The player's name (case-insensitive)
+
+**Returns:** `true` if the player has a secure code set, `false` otherwise.
+
+**Location:** `DatabaseManager.java:54-63`
+
+#### Set Secure Code
+
+Set a new secure code for a player.
+
+```java
+boolean success = databaseManager.setSecureCode("Steve", "mySecurePassword123", false);
+if (success) {
+    player.sendMessage("Secure code set successfully!");
+} else {
+    player.sendMessage("You already have a secure code. Reset it first.");
+}
+```
+
+**Method Signature:**
+```java
+public boolean setSecureCode(String player, String code, boolean isPremium)
+```
+
+**Parameters:**
+- `player` - The player's name
+- `code` - The password to set (will be hashed with BCrypt)
+- `isPremium` - Whether the account is premium (true) or cracked (false)
+
+**Returns:** `true` if successful, `false` if the player already has a code set.
+
+**Location:** `DatabaseManager.java:65-83`
+
+<Warning>
+Passwords are automatically hashed with BCrypt (cost factor 12). Never store or log plaintext passwords.
+</Warning>
+
+#### Verify Secure Code
+
+Check if an entered code matches the stored hash.
+
+```java
+boolean isCorrect = databaseManager.isSecureCodeCorrect("Steve", "userEnteredPassword");
+if (isCorrect) {
+    // Authenticate the player
+    commandBlocker.authenticatePlayer(player.getUniqueId());
+} else {
+    player.sendMessage("Incorrect password!");
+}
+```
+
+**Method Signature:**
+```java
+public boolean isSecureCodeCorrect(String player, String enteredCode)
+```
+
+**Parameters:**
+- `player` - The player's name
+- `enteredCode` - The password to verify
+
+**Returns:** `true` if the password matches, `false` otherwise.
+
+**Location:** `DatabaseManager.java:85-97`
+
+#### Reset Secure Code
+
+Remove a player's secure code from the database.
+
+```java
+boolean removed = databaseManager.resetSecureCode("Steve");
+if (removed) {
+    player.sendMessage("Your secure code has been reset.");
+}
+```
+
+**Method Signature:**
+```java
+public boolean resetSecureCode(String player)
+```
+
+**Parameters:**
+- `player` - The player's name
+
+**Returns:** `true` if the code was removed, `false` if no code existed.
+
+**Location:** `DatabaseManager.java:99-109`
+
+#### Check Premium Status
+
+Determine if a player's account is marked as premium.
+
+```java
+boolean isPremium = databaseManager.isPremiumAccount("Steve");
+if (isPremium) {
+    player.sendMessage("This is a premium account.");
+}
+```
+
+**Method Signature:**
+```java
+public boolean isPremiumAccount(String playerName)
+```
+
+**Parameters:**
+- `playerName` - The player's name
+
+**Returns:** `true` if the account is premium, `false` otherwise.
+
+**Location:** `DatabaseManager.java:122-134`
+
+#### Set Premium Status
+
+Update a player's premium account status.
+
+```java
+databaseManager.setPremiumAccount("Steve", true);
+```
+
+**Method Signature:**
+```java
+public void setPremiumAccount(String playerName, boolean isPremium)
+```
+
+**Parameters:**
+- `playerName` - The player's name
+- `isPremium` - Whether the account should be marked as premium
+
+**Location:** `DatabaseManager.java:136-145`
+
+---
+
+### ConfigManager
+
+Access and modify plugin configuration.
+
+#### Get ConfigManager Instance
+
+```java
+import org.pablito.secureCommands.managers.ConfigManager;
+
+ConfigManager configManager = SecureCommands.getInstance().getConfigManager();
+```
+
+**Method Signature:**
+```java
+public ConfigManager getConfigManager()
+```
+
+**Returns:** The `ConfigManager` instance.
+
+**Location:** `SecureCommands.java:141-143`
+
+#### Get Whitelist
+
+Retrieve the list of whitelisted players.
+
+```java
+List<String> whitelist = configManager.getWhitelist();
+for (String playerName : whitelist) {
+    getLogger().info("Whitelisted: " + playerName);
+}
+```
+
+**Method Signature:**
+```java
+public List<String> getWhitelist()
+```
+
+**Returns:** A list of whitelisted player names.
+
+**Location:** `ConfigManager.java:18-20`
+
+#### Check Whitelist Status
+
+Verify if a specific player is whitelisted.
+
+```java
+boolean isWhitelisted = configManager.isPlayerWhitelisted("Steve");
+if (!isWhitelisted) {
+    player.sendMessage("You are not whitelisted for admin commands.");
+}
+```
+
+**Method Signature:**
+```java
+public boolean isPlayerWhitelisted(String playerName)
+```
+
+**Parameters:**
+- `playerName` - The player's name (case-insensitive)
+
+**Returns:** `true` if the player is whitelisted, `false` otherwise.
+
+**Location:** `ConfigManager.java:38-43`
+
+#### Add Player to Whitelist
+
+Add a player to the whitelist programmatically.
+
+```java
+boolean added = configManager.addPlayerToWhitelist("NewAdmin");
+if (added) {
+    getLogger().info("NewAdmin added to whitelist");
+} else {
+    getLogger().info("NewAdmin is already whitelisted");
+}
+```
+
+**Method Signature:**
+```java
+public boolean addPlayerToWhitelist(String player)
+```
+
+**Parameters:**
+- `player` - The player's name to add
+
+**Returns:** `true` if added successfully, `false` if already whitelisted.
+
+**Location:** `ConfigManager.java:45-57`
+
+#### Remove Player from Whitelist
+
+```java
+boolean removed = configManager.removePlayerFromWhitelist("OldAdmin");
+if (removed) {
+    getLogger().info("OldAdmin removed from whitelist");
+}
+```
+
+**Method Signature:**
+```java
+public boolean removePlayerFromWhitelist(String player)
+```
+
+**Parameters:**
+- `player` - The player's name to remove
+
+**Returns:** `true` if removed, `false` if not found.
+
+**Location:** `ConfigManager.java:59-71`
+
+#### Get Blocked Commands
+
+Retrieve the list of blocked commands.
+
+```java
+List<String> blockedCommands = configManager.getBlockedCommands();
+if (blockedCommands.contains("op")) {
+    getLogger().info("OP command is blocked");
+}
+```
+
+**Method Signature:**
+```java
+public List<String> getBlockedCommands()
+```
+
+**Returns:** A list of blocked command names.
+
+**Location:** `ConfigManager.java:22-24`
+
+---
+
+### MessagesManager
+
+Access localized messages and notifications.
+
+#### Get MessagesManager Instance
+
+```java
+import org.pablito.secureCommands.managers.MessagesManager;
+
+MessagesManager messagesManager = SecureCommands.getInstance().getMessagesManager();
+```
+
+**Method Signature:**
+```java
+public MessagesManager getMessagesManager()
+```
+
+**Returns:** The `MessagesManager` instance for accessing localized messages.
+
+**Location:** `SecureCommands.java:145-147`
+
+---
+
+### PremiumChecker
+
+Check if players have premium (paid) Minecraft accounts.
+
+#### Get PremiumChecker Instance
+
+```java
+import org.pablito.secureCommands.utils.PremiumChecker;
+
+PremiumChecker premiumChecker = SecureCommands.getInstance().getPremiumChecker();
+```
+
+**Method Signature:**
+```java
+public PremiumChecker getPremiumChecker()
+```
+
+**Returns:** The `PremiumChecker` instance.
+
+**Location:** `SecureCommands.java:149-151`
+
+---
+
+### PlayerDataManager
+
+Manage player-specific data and settings.
+
+#### Get PlayerDataManager Instance
+
+```java
+import org.pablito.secureCommands.data.PlayerDataManager;
+
+PlayerDataManager playerDataManager = SecureCommands.getInstance().getPlayerDataManager();
+```
+
+**Method Signature:**
+```java
+public PlayerDataManager getPlayerDataManager()
+```
+
+**Returns:** The `PlayerDataManager` instance.
+
+**Location:** `SecureCommands.java:153-155`
+
+---
+
+### CommandBlocker
+
+Manage player authentication status for command blocking.
+
+#### Get CommandBlocker Instance
+
+```java
+import org.pablito.secureCommands.listeners.CommandBlocker;
+
+CommandBlocker commandBlocker = SecureCommands.getInstance().getCommandBlocker();
+```
+
+**Method Signature:**
+```java
+public CommandBlocker getCommandBlocker()
+```
+
+**Returns:** The `CommandBlocker` instance.
+
+**Location:** `SecureCommands.java:157-159`
+
+---
+
+### DiscordNotifier
+
+Send notifications to Discord via webhooks.
+
+#### Get DiscordNotifier Instance
+
+```java
+import org.pablito.secureCommands.utils.DiscordNotifier;
+
+DiscordNotifier discordNotifier = SecureCommands.getInstance().getDiscordNotifier();
+```
+
+**Method Signature:**
+```java
+public DiscordNotifier getDiscordNotifier()
+```
+
+**Returns:** The `DiscordNotifier` instance.
+
+**Location:** `SecureCommands.java:161-163`
+
+---
+
+### Pending Authentication
+
+Access the set of players currently pending authentication.
+
+```java
+import java.util.Set;
+import java.util.UUID;
+
+Set<UUID> pendingAuth = SecureCommands.getInstance().getPendingAuthentication();
+if (pendingAuth.contains(player.getUniqueId())) {
+    player.sendMessage("Authentication in progress...");
+}
+```
+
+**Method Signature:**
+```java
+public Set<UUID> getPendingAuthentication()
+```
+
+**Returns:** A set of UUIDs for players currently in the authentication process.
+
+**Location:** `SecureCommands.java:165-167`
+
+---
+
+### Reload Plugin Configuration
+
+Reload the plugin configuration programmatically.
+
+```java
+SecureCommands.getInstance().reloadPlugin();
+getLogger().info("SecureCommands configuration reloaded!");
+```
+
+**Method Signature:**
+```java
+public void reloadPlugin()
+```
+
+**Description:** Reloads config.yml, messages, and re-checks operator status.
+
+**Location:** `SecureCommands.java:169-175`
+
+---
+
+## Example Integration
+
+### Complete Example: Custom Authentication Command
+
+Here's a complete example of integrating with SecureCommands to create a custom authentication system:
+
+```java
+package com.example.customplugin;
+
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.pablito.secureCommands.SecureCommands;
+import org.pablito.secureCommands.managers.DatabaseManager;
+import org.pablito.secureCommands.listeners.CommandBlocker;
+
+public class CustomAuthPlugin extends JavaPlugin implements CommandExecutor {
+    
+    private SecureCommands secureCommands;
+    private DatabaseManager databaseManager;
+    private CommandBlocker commandBlocker;
+    
+    @Override
+    public void onEnable() {
+        // Get SecureCommands instance
+        secureCommands = SecureCommands.getInstance();
+        
+        if (secureCommands == null) {
+            getLogger().severe("SecureCommands not found! Disabling plugin.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+        
+        // Get manager instances
+        databaseManager = secureCommands.getDatabaseManager();
+        commandBlocker = secureCommands.getCommandBlocker();
+        
+        // Register custom command
+        getCommand("customauth").setExecutor(this);
+        
+        getLogger().info("Successfully hooked into SecureCommands!");
+    }
+    
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, 
+                            String label, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("Only players can use this command.");
+            return true;
+        }
+        
+        Player player = (Player) sender;
+        
+        if (args.length < 1) {
+            player.sendMessage("Usage: /customauth <password>");
+            return true;
+        }
+        
+        String enteredPassword = args[0];
+        String playerName = player.getName();
+        
+        // Check if player has a secure code set
+        if (!databaseManager.isSecureCodeSet(playerName)) {
+            player.sendMessage("You don't have a secure code set. Contact an admin.");
+            return true;
+        }
+        
+        // Verify the password
+        if (databaseManager.isSecureCodeCorrect(playerName, enteredPassword)) {
+            // Authenticate the player
+            commandBlocker.authenticatePlayer(player.getUniqueId());
+            player.sendMessage("Successfully authenticated!");
+            
+            // Custom logic here
+            grantCustomPermissions(player);
+        } else {
+            player.sendMessage("Incorrect password!");
+        }
+        
+        return true;
+    }
+    
+    private void grantCustomPermissions(Player player) {
+        // Your custom logic after successful authentication
+        player.sendMessage("Custom permissions granted!");
+    }
+}
+```
+
+### Example: Checking Whitelist Before Command Execution
+
+```java
+import org.pablito.secureCommands.SecureCommands;
+import org.pablito.secureCommands.managers.ConfigManager;
+
+public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    if (!(sender instanceof Player)) {
+        return true;
+    }
+    
+    Player player = (Player) sender;
+    ConfigManager configManager = SecureCommands.getInstance().getConfigManager();
+    
+    if (!configManager.isPlayerWhitelisted(player.getName())) {
+        player.sendMessage("You must be whitelisted to use this command.");
+        return true;
+    }
+    
+    // Execute privileged command
+    // ...
+    
+    return true;
+}
+```
+
+### Example: Programmatically Managing Secure Codes
+
+```java
+import org.pablito.secureCommands.SecureCommands;
+import org.pablito.secureCommands.managers.DatabaseManager;
+
+public void setupNewAdmin(String playerName, String temporaryPassword) {
+    DatabaseManager db = SecureCommands.getInstance().getDatabaseManager();
+    
+    // Remove any existing code
+    if (db.isSecureCodeSet(playerName)) {
+        db.resetSecureCode(playerName);
+    }
+    
+    // Set new temporary password
+    boolean success = db.setSecureCode(playerName, temporaryPassword, false);
+    
+    if (success) {
+        getLogger().info("Set up secure code for " + playerName);
+        // Send password via email or Discord
+        notifyAdmin(playerName, temporaryPassword);
+    }
+}
+```
+
+## Event Listening
+
+While SecureCommands doesn't provide custom events (yet), you can listen to Bukkit events to integrate with authentication:
+
+```java
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.pablito.secureCommands.SecureCommands;
+
+public class AuthListener implements Listener {
+    
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        
+        // Check if player needs to authenticate
+        Set<UUID> pending = SecureCommands.getInstance().getPendingAuthentication();
+        
+        if (pending.contains(player.getUniqueId())) {
+            player.sendMessage("Please authenticate with /sclogin <password>");
+            
+            // Remove from spawn or apply restrictions
+            applyAuthenticationRestrictions(player);
+        }
+    }
+    
+    private void applyAuthenticationRestrictions(Player player) {
+        // Your custom logic (e.g., teleport to auth area, freeze player)
+    }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always Check for Null">
+    Always verify that `SecureCommands.getInstance()` returns a non-null value before using the API:
+    
+    ```java
+    SecureCommands sc = SecureCommands.getInstance();
+    if (sc == null) {
+        // Handle SecureCommands not being loaded
+        return;
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Use softdepend for Optional Integration">
+    If SecureCommands integration is optional, use `softdepend` in your plugin.yml and check for its presence:
+    
+    ```yaml
+    softdepend: [SecureCommands]
+    ```
+    
+    ```java
+    if (getServer().getPluginManager().getPlugin("SecureCommands") != null) {
+        // SecureCommands is available
+        setupSecureCommandsIntegration();
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Never Store Plaintext Passwords">
+    Always use `DatabaseManager.setSecureCode()` to store passwords. Never store plaintext passwords in your own database or log them.
+  </Accordion>
+  
+  <Accordion title="Respect Plugin Configuration">
+    Check the player's whitelist status and authentication state before granting access to privileged operations.
+  </Accordion>
+</AccordionGroup>
+
+## Support
+
+For API questions or feature requests:
+
+- **SpigotMC Resource Page:** Post in the discussion thread
+- **GitHub Issues:** If the plugin has a public repository
+- **Discord:** Join the community server (if available)
+
+<Info>
+This API is subject to change in future versions. Always check the latest documentation and use the `provided` scope to avoid conflicts.
+</Info>

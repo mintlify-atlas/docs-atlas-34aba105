@@ -1,0 +1,147 @@
+---
+title: 'Permissions'
+description: 'Complete guide to SecureCommands permissions and access control'
+icon: 'shield-check'
+---
+
+## Overview
+
+SecureCommands uses a permission-based system to control access to administrative commands. This guide covers all available permissions and how to configure them properly.
+
+## Available Permissions
+
+### securecommands.admin
+
+**Required for:** All `/sc` administrative commands
+
+**Description:** Grants full access to all SecureCommands administrative functions, including:
+
+- Setting and resetting secure codes
+- Managing the whitelist
+- Adding/removing blocked commands
+- Configuring premium accounts
+- Reloading plugin configuration
+
+This permission should only be granted to trusted server administrators.
+
+```yaml
+permissions:
+  securecommands.admin:
+    description: Full access to SecureCommands administrative commands
+    default: op
+```
+
+## Permission Configuration
+
+### Using a Permission Plugin
+
+For servers using permission management plugins like LuckPerms, PermissionsEx, or GroupManager:
+
+**LuckPerms Example:**
+```bash
+/lp group admin permission set securecommands.admin true
+/lp user Steve permission set securecommands.admin true
+```
+
+**PermissionsEx Example:**
+```bash
+/pex group admin add securecommands.admin
+/pex user Steve add securecommands.admin
+```
+
+### Using Bukkit/Spigot OP System
+
+By default, the `securecommands.admin` permission is granted to server operators (OPs). However, SecureCommands includes additional security features:
+
+<Warning>
+SecureCommands automatically removes OP status from players who are not on the whitelist, even if they've been manually opped. This prevents unauthorized access to administrative commands.
+</Warning>
+
+## Whitelist System
+
+The whitelist system works alongside permissions to provide an additional layer of security:
+
+1. **Only whitelisted players** can set secure codes and use protected commands
+2. **OP status is enforced** - non-whitelisted players automatically lose OP status on join
+3. **Premium account protection** - prevents cracked clients from accessing premium accounts
+
+### Managing the Whitelist
+
+Add a player to the whitelist:
+```bash
+/sc add <player>
+```
+
+Remove a player from the whitelist:
+```bash
+/sc remove <player>
+```
+
+View the whitelist in your `config.yml`:
+```yaml
+whitelist:
+  - "Steve"
+  - "Alex"
+  - "Notch"
+```
+
+## Command Access Matrix
+
+| Command | Permission Required | Whitelist Required | Notes |
+|---------|-------------------|-------------------|-------|
+| `/sclogin <password>` | None | Yes | For authentication |
+| `/sc setcode <player> <code>` | securecommands.admin | No | Admin only |
+| `/sc resetcode <player>` | securecommands.admin | No | Admin only |
+| `/sc resetall` | securecommands.admin | No | Admin only |
+| `/sc reload` | securecommands.admin | No | Admin only |
+| `/sc add <player>` | securecommands.admin | No | Admin only |
+| `/sc remove <player>` | securecommands.admin | No | Admin only |
+| `/sc addcommand <cmd>` | securecommands.admin | No | Admin only |
+| `/sc removecommand <cmd>` | securecommands.admin | No | Admin only |
+| `/sc premium <player> <true/false>` | securecommands.admin | No | Admin only |
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Principle of Least Privilege">
+    Only grant `securecommands.admin` to administrators who absolutely need it. Regular players should only be added to the whitelist if they need to use protected commands.
+  </Accordion>
+
+  <Accordion title="Regular Audits">
+    Periodically review your whitelist and permission assignments. Remove access for players who no longer need it or who have left your server.
+  </Accordion>
+
+  <Accordion title="Separate Admin Accounts">
+    Consider using separate admin accounts for high-privilege operations. Never give your main admin account to other players.
+  </Accordion>
+
+  <Accordion title="Monitor OP Status Changes">
+    Check your server logs regularly for messages about OP status removal. This can indicate unauthorized access attempts.
+  </Accordion>
+</AccordionGroup>
+
+## Security Notes
+
+<Warning>
+Players with `securecommands.admin` permission have full control over the plugin, including the ability to:
+- Reset all secure codes
+- Modify the whitelist
+- Change blocked commands
+- Configure premium account settings
+
+Only grant this permission to fully trusted administrators.
+</Warning>
+
+## Troubleshooting
+
+**Problem:** Admin commands not working despite having permission
+
+**Solution:** Ensure you're also on the whitelist (`/sc add <yourname>`) and have OP status. Check your permission plugin configuration.
+
+**Problem:** Players losing OP status automatically
+
+**Solution:** This is intentional. Add the player to the whitelist first: `/sc add <player>`. Only whitelisted players can maintain OP status.
+
+**Problem:** Permission plugin conflicts
+
+**Solution:** Ensure your permission plugin is loaded before SecureCommands. Check the load order in your server startup logs.

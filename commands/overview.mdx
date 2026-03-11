@@ -1,0 +1,80 @@
+---
+title: Commands Overview
+description: Complete list of all SecureCommands plugin commands
+---
+
+SecureCommands provides a comprehensive set of commands for securing your Minecraft server with password authentication and command blocking.
+
+## Authentication Commands
+
+### /sclogin
+Authenticate yourself to use blocked commands by entering your secure password.
+
+**Usage:** `/sclogin <password>`
+
+---
+
+## Administration Commands
+
+These commands require the `securecommands.admin` permission or OP status.
+
+### /sc reload
+Reload the plugin configuration and settings.
+
+**Usage:** `/sc reload`
+
+### /sc setcode
+Set your secure password for authentication.
+
+**Usage:** `/sc setcode <password>`
+
+### /sc resetcode
+Reset a player's secure password (console only).
+
+**Usage:** `/sc resetcode <player>`
+
+### /sc resetall
+Reset all players' secure passwords (console only).
+
+**Usage:** `/sc resetall`
+
+---
+
+## Whitelist Management Commands
+
+### /sc add
+Add a player to the whitelist, allowing them to set a secure password.
+
+**Usage:** `/sc add <player>`
+
+### /sc remove
+Remove a player from the whitelist and revoke their access.
+
+**Usage:** `/sc remove <player>`
+
+---
+
+## Command Blocking Commands
+
+### /sc addcommand
+Add a command to the blocked commands list that requires authentication.
+
+**Usage:** `/sc addcommand <command>`
+
+### /sc removecommand
+Remove a command from the blocked commands list.
+
+**Usage:** `/sc removecommand <command>`
+
+---
+
+## Premium Commands
+
+### /sc premium
+Toggle premium check status for a player, allowing them to bypass password requirements.
+
+**Usage:** `/sc premium <player>`
+
+<Note>
+Most administrative commands require either OP status or console access. Authentication commands are available to whitelisted players.
+</Note>

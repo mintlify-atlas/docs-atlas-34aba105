@@ -1,0 +1,286 @@
+---
+title: Whitelist Configuration
+description: Configure and manage the player whitelist for SecureCommands
+---
+
+The whitelist feature allows you to bypass security code authentication for trusted players. Whitelisted players can execute blocked commands without needing to authenticate.
+
+## Configuration
+
+The whitelist is configured in the `config.yml` file:
+
+```yaml
+whitelist:
+  - "Player1"
+  - "Player2"
+```
+
+## Configuration Parameter
+
+<ParamField path="whitelist" type="array" default='["Player1", "Player2"]'>
+  A list of player usernames that are exempt from security code authentication.
+  
+  **Key Points:**
+  - Usernames are case-insensitive
+  - Whitelisted players can execute all blocked commands
+  - Changes require a reload to take effect (or use in-game commands)
+  - Use for trusted administrators and server operators
+</ParamField>
+
+## How It Works
+
+When a player is on the whitelist:
+
+1. They can execute any blocked command without authentication
+2. They never need to set up a security code
+3. They bypass all security checks
+4. Their username is compared case-insensitively
+
+<Warning>
+  Only add players you completely trust to the whitelist. Whitelisted players have unrestricted access to all blocked commands.
+</Warning>
+
+## Managing the Whitelist In-Game
+
+You can manage the whitelist without editing the config file:
+
+### Add a Player
+
+```
+/sc add <player>
+```
+
+**Example:**
+```
+/sc add Notch
+```
+
+<Info>
+  Usernames are automatically converted to lowercase when added.
+</Info>
+
+### Remove a Player
+
+```
+/sc remove <player>
+```
+
+**Example:**
+```
+/sc remove Notch
+```
+
+### Check Whitelist Status
+
+To verify if a player is whitelisted, you can check the `config.yml` file or attempt to add them (you'll receive a message if they're already on the list).
+
+## Permissions
+
+<ParamField path="securecommands.admin" type="permission">
+  Required to add and remove players from the whitelist.
+  
+  **Commands:**
+  - `/sc add <player>`
+  - `/sc remove <player>`
+</ParamField>
+
+## Use Cases
+
+### Server Owners
+
+Add yourself and any co-owners:
+
+```yaml
+whitelist:
+  - "ServerOwner"
+  - "CoOwner1"
+  - "CoOwner2"
+```
+
+### Trusted Administrators
+
+Include long-term, trusted staff members:
+
+```yaml
+whitelist:
+  - "ServerOwner"
+  - "HeadAdmin"
+  - "TrustedAdmin"
+```
+
+### Testing Accounts
+
+Add testing accounts for development:
+
+```yaml
+whitelist:
+  - "TestAccount1"
+  - "DevAccount"
+```
+
+<Note>
+  Remove testing accounts before deploying to production.
+</Note>
+
+## Best Practices
+
+### 1. Keep the List Small
+
+Only whitelist players who absolutely need unrestricted access:
+
+```yaml
+# Good - only essential staff
+whitelist:
+  - "Owner"
+  - "HeadAdmin"
+
+# Bad - too many people
+whitelist:
+  - "Owner"
+  - "Admin1"
+  - "Admin2"
+  - "Moderator1"
+  - "Moderator2"
+  - "Helper1"
+  # ... etc
+```
+
+### 2. Regular Audits
+
+Periodically review the whitelist:
+
+- Remove players who are no longer staff
+- Remove inactive accounts
+- Verify all whitelisted players are still trusted
+
+### 3. Document the Reason
+
+Keep track of why each player is whitelisted:
+
+```yaml
+whitelist:
+  - "ServerOwner"    # Owner - permanent
+  - "HeadAdmin"      # Head Admin since 2024
+  - "Developer"      # Plugin developer - temporary
+```
+
+### 4. Use Security Codes for Others
+
+For players who need access but aren't fully trusted, use the security code system instead of the whitelist:
+
+- Junior moderators
+- Trial staff members
+- Temporary administrators
+
+## Security Considerations
+
+### Account Compromise
+
+<Warning>
+  If a whitelisted player's account is compromised, the attacker has full access to all blocked commands. Consider:
+  
+  1. Requiring all staff to use strong passwords
+  2. Enabling Minecraft account two-factor authentication
+  3. Monitoring server activity regularly
+</Warning>
+
+### Whitelist vs Security Codes
+
+| Feature | Whitelist | Security Codes |
+|---------|-----------|----------------|
+| Setup | Add to config | `/setcode <code>` |
+| Access | Permanent | Requires login |
+| Security | Account-based | Additional layer |
+| Best For | Owners, trusted admins | Regular staff |
+| Revocation | Remove from list | Reset code |
+
+### Premium Accounts
+
+The plugin includes support for premium (Mojang) account detection:
+
+- Premium accounts are verified through Mojang's servers
+- This adds an additional layer of security
+- See the `/premium` command for managing premium status
+
+<Info>
+  Premium account checking helps ensure the player is using an authentic Minecraft account.
+</Info>
+
+## Combining with Other Security
+
+The whitelist works alongside other security features:
+
+### With Blocked Commands
+
+Whitelisted players bypass blocked commands entirely:
+
+```yaml
+whitelist:
+  - "Owner"
+
+blocked-commands:
+  - "/op"  # Owner can use this without authentication
+  - "/ban" # Owner can use this without authentication
+```
+
+### With Discord Notifications
+
+Whitelisted players' actions can still trigger Discord notifications if configured. See [Discord Configuration](/configuration/discord) for details.
+
+## Reloading Changes
+
+After editing `config.yml`, reload the plugin:
+
+```
+/sc reload
+```
+
+<Info>
+  When using in-game commands (`/sc add` or `/sc remove`), changes are saved automatically and no reload is needed.
+</Info>
+
+## Troubleshooting
+
+### Player Still Needs to Authenticate
+
+**Check:**
+1. Spelling of the username is correct
+2. Player's username hasn't changed
+3. Plugin was reloaded after config change
+4. No typos in the config file (proper YAML formatting)
+
+### Can't Add Player to Whitelist
+
+**Possible reasons:**
+1. Missing `securecommands.admin` permission
+2. Player is already on the whitelist
+3. Configuration file is locked or read-only
+
+### Whitelist Changes Not Saving
+
+<Warning>
+  Ensure the `config.yml` file is not read-only and the plugin has write permissions to the plugin folder.
+</Warning>
+
+## Example Configuration
+
+Here's a complete example with whitelist and related settings:
+
+```yaml
+# Whitelisted players - bypass all security
+whitelist:
+  - "ServerOwner"
+  - "HeadAdmin"
+
+# Commands that require authentication (unless whitelisted)
+blocked-commands:
+  - "/op"
+  - "/deop"
+  - "/ban"
+  - "/kick"
+  - "/pardon"
+  - "/stop"
+
+# Language setting
+language: "en"
+```

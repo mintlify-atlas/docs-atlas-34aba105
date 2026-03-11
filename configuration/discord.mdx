@@ -1,0 +1,326 @@
+---
+title: Discord Configuration
+description: Configure Discord webhook notifications for SecureCommands
+---
+
+SecureCommands can send notifications to Discord channels using webhooks. This allows you to monitor plugin updates and security events in real-time.
+
+## Configuration
+
+The Discord settings are configured in the `config.yml` file:
+
+```yaml
+discord:
+  # Enable or disable all Discord notifications
+  enabled: false
+
+  # Webhook to notify about plugin updates
+  update-webhook-url: "YOUR_UPDATES_WEBHOOK_HERE"
+
+  # Webhook to notify about security events (blocked commands, failed logins)
+  security-webhook-url: "YOUR_SECURITY_WEBHOOK_HERE"
+```
+
+## Configuration Parameters
+
+<ParamField path="discord.enabled" type="boolean" default="false">
+  Master switch for all Discord notifications.
+  
+  - Set to `true` to enable Discord notifications
+  - Set to `false` to disable all notifications
+  - When disabled, no webhook requests are sent
+</ParamField>
+
+<ParamField path="discord.update-webhook-url" type="string" default="YOUR_UPDATES_WEBHOOK_HERE">
+  The Discord webhook URL for plugin update notifications.
+  
+  **Usage:**
+  - Notifies when a new version of SecureCommands is available
+  - Includes version information and download link
+  - Sends embed messages with green color (0x00FF00)
+  
+  <Info>
+    To disable update notifications specifically, set this to `none` or leave as the placeholder value.
+  </Info>
+</ParamField>
+
+<ParamField path="discord.security-webhook-url" type="string" default="YOUR_SECURITY_WEBHOOK_HERE">
+  The Discord webhook URL for security event notifications.
+  
+  **Usage:**
+  - Notifies when blocked commands are attempted
+  - Reports failed login attempts
+  - Alerts about suspicious activity
+  - Sends embed messages with red color (0xFF0000)
+  
+  <Warning>
+    Security notifications can be frequent on active servers. Consider using a dedicated channel.
+  </Warning>
+</ParamField>
+
+## Setting Up Discord Webhooks
+
+### 1. Create a Discord Webhook
+
+1. Open Discord and go to your server
+2. Right-click the channel where you want notifications
+3. Select **Edit Channel**
+4. Navigate to **Integrations** → **Webhooks**
+5. Click **New Webhook**
+6. Give it a name (e.g., "SecureCommands Updates")
+7. Copy the webhook URL
+
+### 2. Configure the Plugin
+
+Add the webhook URLs to your `config.yml`:
+
+```yaml
+discord:
+  enabled: true
+  update-webhook-url: "https://discord.com/api/webhooks/123456789/abcdefg"
+  security-webhook-url: "https://discord.com/api/webhooks/987654321/hijklmn"
+```
+
+### 3. Reload the Plugin
+
+```
+/sc reload
+```
+
+<Info>
+  You can use the same webhook URL for both update and security notifications, but separate channels are recommended for better organization.
+</Info>
+
+## Notification Types
+
+### Update Notifications
+
+When a new version is available, you'll receive:
+
+**Format:**
+```
+🚀 New SecureCommands Update Available!
+
+Update Title
+Release notes...
+
+🔹 Current version: 1.0.0
+🔹 Latest version: 1.1.0
+🔹 Update here (link to SpigotMC)
+```
+
+**Color:** Green (0x00FF00)
+
+### Security Notifications
+
+For security events:
+
+**Examples:**
+- Player attempted blocked command without authentication
+- Failed login attempts
+- Suspicious activity detected
+
+**Color:** Red (0xFF0000)
+
+<Note>
+  The exact format of security notifications depends on the event type and includes relevant player and command information.
+</Note>
+
+## Recommended Setup
+
+### Two-Channel Setup (Recommended)
+
+Create two separate channels for better organization:
+
+1. **#securecommands-updates**
+   - For plugin updates only
+   - Low traffic
+   - Can be notification-free
+
+2. **#securecommands-security**
+   - For security alerts
+   - May be higher traffic
+   - Should notify moderators
+
+```yaml
+discord:
+  enabled: true
+  update-webhook-url: "https://discord.com/api/webhooks/...updates..."
+  security-webhook-url: "https://discord.com/api/webhooks/...security..."
+```
+
+### Single-Channel Setup
+
+For smaller servers, use one channel:
+
+```yaml
+discord:
+  enabled: true
+  update-webhook-url: "https://discord.com/api/webhooks/123456789/abcdefg"
+  security-webhook-url: "https://discord.com/api/webhooks/123456789/abcdefg"
+```
+
+### Updates Only
+
+To only receive update notifications:
+
+```yaml
+discord:
+  enabled: true
+  update-webhook-url: "https://discord.com/api/webhooks/123456789/abcdefg"
+  security-webhook-url: "none"
+```
+
+### Security Only
+
+To only receive security notifications:
+
+```yaml
+discord:
+  enabled: true
+  update-webhook-url: "none"
+  security-webhook-url: "https://discord.com/api/webhooks/123456789/abcdefg"
+```
+
+## Disabling Notifications
+
+There are several ways to disable Discord notifications:
+
+### Disable All Notifications
+
+```yaml
+discord:
+  enabled: false
+  # URLs don't matter when enabled is false
+```
+
+### Disable Specific Types
+
+Set the webhook URL to `none` or keep the placeholder:
+
+```yaml
+discord:
+  enabled: true
+  update-webhook-url: "none"  # No update notifications
+  security-webhook-url: "https://discord.com/api/webhooks/..."  # Security only
+```
+
+## Troubleshooting
+
+### Notifications Not Appearing
+
+**Check:**
+
+1. **Discord integration is enabled:**
+   ```yaml
+   discord:
+     enabled: true
+   ```
+
+2. **Webhook URL is valid:**
+   - Should start with `https://discord.com/api/webhooks/`
+   - No extra spaces or quotes
+   - Not set to placeholder values
+
+3. **Webhook still exists:**
+   - Webhook wasn't deleted in Discord
+   - Channel still exists
+
+4. **Plugin was reloaded:**
+   ```
+   /sc reload
+   ```
+
+<Warning>
+  Check the server console for error messages. The plugin will log if webhook delivery fails.
+</Warning>
+
+### Rate Limiting
+
+Discord has rate limits for webhooks:
+
+- 30 requests per minute per webhook
+- If exceeded, requests will be rejected
+
+<Info>
+  SecureCommands sends notifications asynchronously to avoid impacting server performance.
+</Info>
+
+### Webhook Errors
+
+Common HTTP response codes:
+
+| Code | Meaning | Solution |
+|------|---------|----------|
+| 200-299 | Success | Notification delivered |
+| 401 | Unauthorized | Webhook URL is invalid |
+| 404 | Not Found | Webhook was deleted |
+| 429 | Rate Limited | Too many requests, slow down |
+
+## Security Considerations
+
+### Webhook URL Protection
+
+<Warning>
+  Webhook URLs are sensitive. Anyone with the URL can send messages to your Discord channel.
+  
+  **Best practices:**
+  - Don't share your config.yml publicly
+  - Use environment variables or secrets management for public repositories
+  - Regenerate webhooks if compromised
+</Warning>
+
+### Information Disclosure
+
+Security notifications may include:
+- Player usernames
+- Command attempted
+- Timestamps
+- Server information
+
+Ensure the Discord channel has appropriate permissions.
+
+### Webhook Regeneration
+
+If a webhook URL is compromised:
+
+1. Delete the webhook in Discord
+2. Create a new webhook
+3. Update `config.yml` with the new URL
+4. Reload the plugin
+
+## Example Configurations
+
+### Production Server
+
+```yaml
+discord:
+  enabled: true
+  update-webhook-url: "https://discord.com/api/webhooks/123456789/update-webhook"
+  security-webhook-url: "https://discord.com/api/webhooks/123456789/security-webhook"
+
+# Other settings...
+whitelist:
+  - "Owner"
+blocked-commands:
+  - "/op"
+  - "/ban"
+```
+
+### Development Server
+
+```yaml
+discord:
+  enabled: false  # Disable in development
+  update-webhook-url: "YOUR_UPDATES_WEBHOOK_HERE"
+  security-webhook-url: "YOUR_SECURITY_WEBHOOK_HERE"
+```
+
+### Minimal Setup
+
+```yaml
+discord:
+  enabled: true
+  update-webhook-url: "https://discord.com/api/webhooks/123456789/abcdefg"
+  security-webhook-url: "https://discord.com/api/webhooks/123456789/abcdefg"
+```
